@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Latest commit: `4401897 improve restaurant open table flow`
+- Recent feature commit: `4401897 improve restaurant open table flow`
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
