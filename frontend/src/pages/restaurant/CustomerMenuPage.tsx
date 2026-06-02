@@ -1,31 +1,61 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, ChevronRight, Clock, Loader2, ShoppingCart, X } from "lucide-react";
+import {
+  CheckCircle2,
+  ChefHat,
+  ChevronRight,
+  Loader2,
+  Minus,
+  Plus,
+  ReceiptText,
+  ShoppingCart,
+  Utensils,
+  X
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 
 type MenuItem = {
-  id: string; name: string; description: string | null;
-  selling_price: number; category_id: string | null; category_name: string | null;
-  image_url: string | null; is_available: boolean;
+  id: string;
+  name: string;
+  description: string | null;
+  selling_price: number;
+  category_id: string | null;
+  category_name: string | null;
+  image_url: string | null;
+  is_available: boolean;
 };
 
 type MenuResponse = {
-  session_id: string | null; queue_number: number | null;
-  table_name: string | null; branch_name: string;
-  fb_service_mode: string; categories: { id: string; name: string }[];
-  products: MenuItem[]; session_status: string | null;
+  session_id: string | null;
+  queue_number: number | null;
+  table_name: string | null;
+  branch_name: string;
+  fb_service_mode: string;
+  categories: { id: string; name: string }[];
+  products: MenuItem[];
+  session_status: string | null;
 };
 
 type CartItem = { product: MenuItem; qty: number; special_request: string };
-type OrderStatus = { session_id: string; queue_number: number | null; session_status: string; items: { id: string; product_name: string; qty: number; status: string }[] };
+
+type OrderStatus = {
+  session_id: string;
+  queue_number: number | null;
+  session_status: string;
+  items: { id: string; product_name: string; qty: number; status: string }[];
+};
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  pending: { label: "รอทำ", color: "bg-amber-100 text-amber-700" },
-  cooking: { label: "กำลังทำ", color: "bg-blue-100 text-blue-700" },
-  done: { label: "พร้อมเสิร์ฟ ✅", color: "bg-emerald-100 text-emerald-700" },
-  served: { label: "เสิร์ฟแล้ว", color: "bg-slate-100 text-slate-600" },
+  pending: { label: "รอรับออเดอร์", color: "bg-amber-100 text-amber-800" },
+  cooking: { label: "กำลังทำ", color: "bg-sky-100 text-sky-800" },
+  done: { label: "พร้อมเสิร์ฟ", color: "bg-emerald-100 text-emerald-800" },
+  served: { label: "เสิร์ฟแล้ว", color: "bg-slate-100 text-slate-600" }
 };
+
+function formatCurrency(value: number): string {
+  return `฿${value.toFixed(0)}`;
+}
 
 export default function CustomerMenuPage(): JSX.Element {
   const { token } = useParams<{ token: string }>();
@@ -41,12 +71,11 @@ export default function CustomerMenuPage(): JSX.Element {
   const menuQuery = useQuery({
     queryKey: ["public-menu", token],
     queryFn: async () => (await axios.get(`/api/public/menu/${token}`)).data.data as MenuResponse,
-    enabled: Boolean(token),
+    enabled: Boolean(token)
   });
 
   const menu = menuQuery.data;
 
-  // restore session from localStorage
   useEffect(() => {
     const stored = localStorage.getItem(`dining-session-${token}`);
     if (stored) setSessionId(stored);
@@ -54,96 +83,113 @@ export default function CustomerMenuPage(): JSX.Element {
       setSessionId(menu.session_id);
       localStorage.setItem(`dining-session-${token}`, menu.session_id);
     }
-  }, [menu?.session_id, token]);
+  }, [menu?.session_id, sessionId, token]);
 
   const statusQuery = useQuery({
     queryKey: ["order-status", sessionId],
     queryFn: async () =>
       (await axios.get(`/api/public/menu/${token}/status?session_id=${sessionId}`)).data.data as OrderStatus,
     enabled: Boolean(sessionId) && orderPlaced,
-    refetchInterval: 8_000,
+    refetchInterval: 8_000
   });
 
-  // เล่นเสียงเมื่อออเดอร์ done
   useEffect(() => {
     const items = statusQuery.data?.items ?? [];
-    const allDone = items.length > 0 && items.every((i) => i.status === "done" || i.status === "served");
-    if (allDone) {
-      if (!audioRef.current) audioRef.current = new AudioContext();
-      const ctx = audioRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 880; gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.8);
-    }
+    const allDone = items.length > 0 && items.every((item) => item.status === "done" || item.status === "served");
+    if (!allDone) return;
+
+    if (!audioRef.current) audioRef.current = new AudioContext();
+    const ctx = audioRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.8);
   }, [statusQuery.data]);
 
   const orderMutation = useMutation({
     mutationFn: async () => {
       const res = await axios.post(`/api/public/menu/${token}/orders`, {
-        items: cart.map((c) => ({ product_id: c.product.id, qty: c.qty, special_request: c.special_request || null })),
-        note: note || null,
+        items: cart.map((item) => ({
+          product_id: item.product.id,
+          qty: item.qty,
+          special_request: item.special_request || null
+        })),
+        note: note || null
       });
       return res.data.data as { session_id: string; queue_number: number | null };
     },
     onSuccess: (data) => {
       setSessionId(data.session_id);
       localStorage.setItem(`dining-session-${token}`, data.session_id);
-      setCart([]); setCartOpen(false); setOrderPlaced(true); setNote("");
+      setCart([]);
+      setCartOpen(false);
+      setOrderPlaced(true);
+      setNote("");
       queryClient.invalidateQueries({ queryKey: ["order-status"] });
-    },
+    }
   });
 
   const billMutation = useMutation({
     mutationFn: async () => axios.post(`/api/public/menu/${token}/bill?session_id=${sessionId}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["order-status"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["order-status"] })
   });
 
   function addToCart(product: MenuItem): void {
     setCart((prev) => {
-      const existing = prev.find((c) => c.product.id === product.id);
-      if (existing) return prev.map((c) => c.product.id === product.id ? { ...c, qty: c.qty + 1 } : c);
+      const existing = prev.find((item) => item.product.id === product.id);
+      if (existing) {
+        return prev.map((item) => item.product.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+      }
       return [...prev, { product, qty: 1, special_request: "" }];
     });
   }
 
   function removeFromCart(productId: string): void {
-    setCart((prev) => prev.filter((c) => c.product.id !== productId));
+    setCart((prev) => prev.filter((item) => item.product.id !== productId));
   }
 
   function updateQty(productId: string, delta: number): void {
-    setCart((prev) => prev.map((c) => {
-      if (c.product.id !== productId) return c;
-      const next = c.qty + delta;
-      return next <= 0 ? null : { ...c, qty: next };
-    }).filter(Boolean) as CartItem[]);
+    setCart((prev) =>
+      prev
+        .map((item) => {
+          if (item.product.id !== productId) return item;
+          const next = item.qty + delta;
+          return next <= 0 ? null : { ...item, qty: next };
+        })
+        .filter(Boolean) as CartItem[]
+    );
   }
 
-  const visibleProducts = useMemo(() =>
-    (menu?.products ?? []).filter((p) => !selectedCategory || p.category_id === selectedCategory),
+  const visibleProducts = useMemo(
+    () => (menu?.products ?? []).filter((product) => !selectedCategory || product.category_id === selectedCategory),
     [menu?.products, selectedCategory]
   );
 
-  const cartTotal = cart.reduce((sum, c) => sum + c.product.selling_price * c.qty, 0);
-  const cartCount = cart.reduce((sum, c) => sum + c.qty, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + item.product.selling_price * item.qty, 0);
+  const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const orderStatus = statusQuery.data;
   const queueNum = orderStatus?.queue_number ?? menuQuery.data?.queue_number;
+  const hasOrderItems = (orderStatus?.items ?? []).length > 0;
+  const allDone = hasOrderItems && (orderStatus?.items ?? []).every((item) => item.status === "done" || item.status === "served");
 
   if (menuQuery.isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-orange-50">
-        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-700" />
       </div>
     );
   }
 
   if (!menu) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-orange-50 p-4 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 text-center">
         <div>
-          <p className="text-2xl font-bold text-slate-700">ไม่พบเมนูนี้</p>
+          <p className="text-2xl font-bold text-slate-800">ไม่พบเมนูนี้</p>
           <p className="mt-2 text-slate-500">QR อาจหมดอายุหรือไม่ถูกต้อง</p>
         </div>
       </div>
@@ -151,192 +197,255 @@ export default function CustomerMenuPage(): JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white pb-32">
-      {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-orange-100 bg-white/90 backdrop-blur px-4 py-3">
-        <p className="text-xs text-orange-500 font-semibold uppercase tracking-wider">{menu.branch_name}</p>
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-bold text-slate-900">
-            {menu.table_name ? `โต๊ะ ${menu.table_name}` : "เมนู"}
-          </p>
-          {queueNum && (
-            <div className="rounded-full bg-orange-500 px-4 py-1 text-white">
-              <span className="text-xs">คิว</span>
-              <span className="ml-1 text-xl font-bold">{String(queueNum).padStart(3, "0")}</span>
+    <div className="min-h-screen bg-slate-50 pb-32">
+      <div className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="mx-auto max-w-lg">
+          <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+            <Utensils className="h-3.5 w-3.5" />
+            <span className="truncate">{menu.branch_name}</span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-xl font-bold text-slate-950">
+                {menu.table_name ? `โต๊ะ ${menu.table_name}` : "เมนูอาหาร"}
+              </p>
+              <p className="text-xs text-slate-500">เลือกเมนู ใส่หมายเหตุ แล้วส่งออเดอร์เข้าครัว</p>
             </div>
-          )}
+            {queueNum ? (
+              <div className="shrink-0 rounded-2xl bg-slate-950 px-3 py-2 text-center text-white">
+                <span className="block text-[10px] font-medium uppercase text-slate-300">Queue</span>
+                <span className="text-xl font-bold">{String(queueNum).padStart(3, "0")}</span>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      {/* Order Status Banner */}
-      {orderPlaced && orderStatus && (
-        <div className="mx-4 mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <div className="flex items-center justify-between">
-            <p className="font-semibold text-blue-800">สถานะออเดอร์</p>
-            {orderStatus.session_status === "open" && (
-              <button
-                type="button"
-                className="rounded-full bg-blue-600 px-3 py-1 text-xs text-white"
-                onClick={() => !billMutation.isPending && billMutation.mutate()}
-              >
-                เรียกบิล
-              </button>
-            )}
-          </div>
-          <div className="mt-3 space-y-2">
-            {orderStatus.items.map((item) => (
-              <div key={item.id} className="flex items-center justify-between text-sm">
-                <span className="text-slate-700">{item.product_name} ×{item.qty}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_LABEL[item.status]?.color ?? "bg-slate-100"}`}>
-                  {STATUS_LABEL[item.status]?.label ?? item.status}
-                </span>
-              </div>
-            ))}
-          </div>
-          {orderStatus.items.every((i) => i.status === "done") && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-100 px-3 py-2 text-emerald-700">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="font-semibold">ออเดอร์พร้อมแล้ว! มารับได้เลยครับ</span>
+      <main className="mx-auto max-w-lg">
+        <section className="mx-4 mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <ChefHat className="h-5 w-5" />
             </div>
-          )}
-          <button
-            type="button"
-            className="mt-3 text-xs text-blue-600 underline"
-            onClick={() => setOrderPlaced(false)}
-          >
-            สั่งเพิ่ม
-          </button>
-        </div>
-      )}
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-slate-950">สั่งอาหารที่โต๊ะได้ทันที</p>
+              <p className="mt-0.5 text-sm text-slate-500">เพิ่มรายการได้หลายรอบ ระบบจะรวมกับโต๊ะเดิม</p>
+            </div>
+          </div>
+        </section>
 
-      {/* Categories */}
-      {!orderPlaced && (
-        <>
-          <div className="flex gap-2 overflow-x-auto px-4 py-4 no-scrollbar">
+        {orderPlaced && orderStatus ? (
+          <section className={`mx-4 mt-4 rounded-2xl border p-4 shadow-sm ${allDone ? "border-emerald-200 bg-emerald-50" : "border-sky-200 bg-sky-50"}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className={`text-base font-bold ${allDone ? "text-emerald-900" : "text-sky-900"}`}>
+                  {allDone ? "อาหารพร้อมเสิร์ฟแล้ว" : "สถานะออเดอร์"}
+                </p>
+                <p className={`mt-0.5 text-xs ${allDone ? "text-emerald-700" : "text-sky-700"}`}>
+                  อัปเดตอัตโนมัติทุก 8 วินาที
+                </p>
+              </div>
+              {orderStatus.session_status === "open" ? (
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-950 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                  disabled={billMutation.isPending}
+                  onClick={() => !billMutation.isPending && billMutation.mutate()}
+                >
+                  {billMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ReceiptText className="h-3.5 w-3.5" />}
+                  เรียกบิล
+                </button>
+              ) : null}
+            </div>
+            <div className="mt-4 space-y-2">
+              {orderStatus.items.map((item) => (
+                <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-2 text-sm">
+                  <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{item.product_name} x{item.qty}</span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_LABEL[item.status]?.color ?? "bg-slate-100 text-slate-600"}`}>
+                    {STATUS_LABEL[item.status]?.label ?? item.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+            {allDone ? (
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-emerald-800">
+                <CheckCircle2 className="h-5 w-5" />
+                <span className="font-semibold">พนักงานจะนำอาหารไปเสิร์ฟที่โต๊ะ</span>
+              </div>
+            ) : null}
             <button
               type="button"
-              onClick={() => setSelectedCategory("")}
-              className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-all ${!selectedCategory ? "bg-orange-500 text-white shadow-md" : "border border-slate-200 bg-white text-slate-600"}`}
+              className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-sky-700"
+              onClick={() => setOrderPlaced(false)}
             >
-              ทั้งหมด
+              สั่งเพิ่ม <ChevronRight className="h-4 w-4" />
             </button>
-            {menu.categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-all ${selectedCategory === cat.id ? "bg-orange-500 text-white shadow-md" : "border border-slate-200 bg-white text-slate-600"}`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+          </section>
+        ) : null}
 
-          {/* Product Grid */}
-          <div className="space-y-3 px-4">
-            {visibleProducts.map((product) => {
-              const cartItem = cart.find((c) => c.product.id === product.id);
-              return (
-                <div key={product.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="h-16 w-16 flex-shrink-0 rounded-xl object-cover" />
-                  ) : (
-                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-2xl">🍽️</div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-slate-900">{product.name}</p>
-                    {product.description && <p className="mt-0.5 text-xs text-slate-500 line-clamp-1">{product.description}</p>}
-                    <p className="mt-1 font-bold text-orange-600">฿{Number(product.selling_price).toFixed(0)}</p>
-                  </div>
-                  {cartItem ? (
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => updateQty(product.id, -1)} className="h-8 w-8 rounded-full border border-slate-300 text-slate-600">−</button>
-                      <span className="w-6 text-center font-semibold">{cartItem.qty}</span>
-                      <button type="button" onClick={() => updateQty(product.id, 1)} className="h-8 w-8 rounded-full bg-orange-500 text-white">+</button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={!product.is_available}
-                      onClick={() => addToCart(product)}
-                      className="h-9 w-9 flex-shrink-0 rounded-full bg-orange-500 text-white disabled:opacity-40 flex items-center justify-center"
-                    >
-                      <ChevronRight className="h-5 w-5" />
-                    </button>
-                  )}
+        {!orderPlaced ? (
+          <>
+            <div className="sticky top-[94px] z-10 mt-4 border-y border-slate-200 bg-slate-50/95 px-4 py-3 backdrop-blur">
+              <div className="flex gap-2 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory("")}
+                  className={`h-10 flex-shrink-0 rounded-full px-4 text-sm font-semibold transition-all ${!selectedCategory ? "bg-slate-950 text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600"}`}
+                >
+                  ทั้งหมด
+                </button>
+                {menu.categories.map((category) => (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(category.id)}
+                    className={`h-10 flex-shrink-0 rounded-full px-4 text-sm font-semibold transition-all ${selectedCategory === category.id ? "bg-slate-950 text-white shadow-sm" : "border border-slate-200 bg-white text-slate-600"}`}
+                  >
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3 px-4 py-4">
+              {visibleProducts.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-10 text-center text-slate-500">
+                  <Utensils className="mx-auto mb-2 h-7 w-7 text-slate-400" />
+                  <p className="font-medium">ยังไม่มีเมนูในหมวดนี้</p>
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+              ) : null}
+              {visibleProducts.map((product) => {
+                const cartItem = cart.find((item) => item.product.id === product.id);
+                return (
+                  <div key={product.id} className="flex items-stretch gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} className="h-20 w-20 flex-shrink-0 rounded-xl object-cover" />
+                    ) : (
+                      <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+                        <Utensils className="h-7 w-7" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 font-semibold leading-snug text-slate-950">{product.name}</p>
+                      {product.description ? <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{product.description}</p> : null}
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <p className="text-base font-bold text-emerald-700">{formatCurrency(Number(product.selling_price))}</p>
+                        {cartItem ? (
+                          <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1">
+                            <button type="button" aria-label={`ลดจำนวน ${product.name}`} onClick={() => updateQty(product.id, -1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm">
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="w-7 text-center font-bold text-slate-950">{cartItem.qty}</span>
+                            <button type="button" aria-label={`เพิ่มจำนวน ${product.name}`} onClick={() => updateQty(product.id, 1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm">
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!product.is_available}
+                            onClick={() => addToCart(product)}
+                            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm disabled:bg-slate-200 disabled:text-slate-500"
+                          >
+                            {product.is_available ? "เพิ่ม" : "หมด"}
+                            {product.is_available ? <Plus className="h-4 w-4" /> : null}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
+      </main>
 
-      {/* Floating Cart Button */}
-      {cartCount > 0 && !cartOpen && (
+      {cartCount > 0 && !cartOpen ? (
         <button
           type="button"
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center gap-3 rounded-2xl bg-orange-500 px-6 py-4 text-white shadow-xl"
+          className="fixed bottom-4 left-4 right-4 z-20 mx-auto flex max-w-lg items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-xl"
         >
-          <ShoppingCart className="h-5 w-5" />
-          <span className="font-semibold">{cartCount} รายการ</span>
-          <span className="ml-2 font-bold">฿{cartTotal.toFixed(0)}</span>
+          <span className="inline-flex items-center gap-2 font-semibold">
+            <ShoppingCart className="h-5 w-5" />
+            {cartCount} รายการ
+          </span>
+          <span className="inline-flex items-center gap-2 font-bold">
+            {formatCurrency(cartTotal)}
+            <ChevronRight className="h-5 w-5" />
+          </span>
         </button>
-      )}
+      ) : null}
 
-      {/* Cart Sheet */}
-      {cartOpen && (
+      {cartOpen ? (
         <div className="fixed inset-0 z-30 flex flex-col bg-white">
-          <div className="flex items-center justify-between border-b px-4 py-4">
-            <h2 className="text-lg font-bold">ตะกร้า ({cartCount})</h2>
-            <button type="button" onClick={() => setCartOpen(false)}><X className="h-6 w-6" /></button>
+          <div className="mx-auto flex w-full max-w-lg items-center justify-between border-b px-4 py-4">
+            <div>
+              <h2 className="text-lg font-bold text-slate-950">ตรวจสอบออเดอร์</h2>
+              <p className="text-sm text-slate-500">{cartCount} รายการสำหรับ{menu.table_name ? `โต๊ะ ${menu.table_name}` : "ออเดอร์นี้"}</p>
+            </div>
+            <button type="button" aria-label="ปิดตะกร้า" onClick={() => setCartOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+
+          <div className="mx-auto w-full max-w-lg flex-1 space-y-3 overflow-y-auto px-4 py-4">
             {cart.map((item) => (
-              <div key={item.product.id} className="rounded-2xl border border-slate-200 p-4">
+              <div key={item.product.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-semibold text-slate-900">{item.product.name}</p>
-                  <button type="button" onClick={() => removeFromCart(item.product.id)}><X className="h-4 w-4 text-slate-400" /></button>
+                  <p className="font-semibold text-slate-950">{item.product.name}</p>
+                  <button type="button" aria-label={`ลบ ${item.product.name}`} onClick={() => removeFromCart(item.product.id)} className="text-slate-400">
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => updateQty(item.product.id, -1)} className="h-8 w-8 rounded-full border text-slate-600">−</button>
+                  <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 p-1">
+                    <button type="button" onClick={() => updateQty(item.product.id, -1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm">
+                      <Minus className="h-4 w-4" />
+                    </button>
                     <span className="w-8 text-center font-bold">{item.qty}</span>
-                    <button type="button" onClick={() => updateQty(item.product.id, 1)} className="h-8 w-8 rounded-full bg-orange-500 text-white">+</button>
+                    <button type="button" onClick={() => updateQty(item.product.id, 1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white shadow-sm">
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
-                  <span className="font-bold text-orange-600">฿{(item.product.selling_price * item.qty).toFixed(0)}</span>
+                  <span className="font-bold text-emerald-700">{formatCurrency(item.product.selling_price * item.qty)}</span>
                 </div>
                 <input
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs"
+                  className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
                   placeholder="หมายเหตุเพิ่มเติม เช่น ไม่ใส่น้ำตาล"
                   value={item.special_request}
-                  onChange={(e) => setCart((prev) => prev.map((c) => c.product.id === item.product.id ? { ...c, special_request: e.target.value } : c))}
+                  onChange={(event) => setCart((prev) => prev.map((cartItem) => cartItem.product.id === item.product.id ? { ...cartItem, special_request: event.target.value } : cartItem))}
                 />
               </div>
             ))}
             <textarea
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
               placeholder="หมายเหตุรวมสำหรับออเดอร์นี้"
               value={note}
               rows={2}
-              onChange={(e) => setNote(e.target.value)}
+              onChange={(event) => setNote(event.target.value)}
             />
           </div>
-          <div className="border-t px-4 py-4">
-            <div className="mb-3 flex justify-between text-lg font-bold">
-              <span>รวม</span><span className="text-orange-600">฿{cartTotal.toFixed(0)}</span>
+
+          <div className="border-t bg-white px-4 py-4">
+            <div className="mx-auto max-w-lg">
+              <div className="mb-3 flex justify-between text-lg font-bold">
+                <span>รวม</span>
+                <span className="text-emerald-700">{formatCurrency(cartTotal)}</span>
+              </div>
+              <button
+                type="button"
+                disabled={orderMutation.isPending}
+                onClick={() => orderMutation.mutate()}
+                className="h-14 w-full rounded-2xl bg-slate-950 text-lg font-bold text-white shadow-sm disabled:opacity-60"
+              >
+                {orderMutation.isPending ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : "สั่งอาหาร"}
+              </button>
             </div>
-            <button
-              type="button"
-              disabled={orderMutation.isPending}
-              onClick={() => orderMutation.mutate()}
-              className="h-14 w-full rounded-2xl bg-orange-500 text-lg font-bold text-white disabled:opacity-60"
-            >
-              {orderMutation.isPending ? <Loader2 className="mx-auto h-6 w-6 animate-spin" /> : "สั่งอาหาร"}
-            </button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

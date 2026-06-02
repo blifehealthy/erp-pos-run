@@ -193,6 +193,29 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - ดูสถานะออเดอร์ของตัวเอง
 - ปุ่ม "เรียกบิล"
 
+#### Customer Mobile Ordering Checklist
+
+**Dine-in `/menu/:qr_token`**
+- [x] โหลดเมนูจาก QR โต๊ะแบบ public
+- [x] แสดงชื่อสาขา / ชื่อโต๊ะ / เลขคิว
+- [x] เลือกหมวดเมนูแบบ horizontal tabs
+- [x] เพิ่ม/ลดจำนวนจากรายการเมนู
+- [x] เพิ่มหมายเหตุรายเมนูและหมายเหตุรวม
+- [x] ส่งออเดอร์เข้า dining session
+- [x] แสดงสถานะรายการอาหารและเรียกบิล
+- [ ] แยก shared mobile menu components ใช้ร่วมกับ Quick Service
+- [ ] เพิ่ม search menu บน mobile
+- [ ] เพิ่ม item detail/options สำหรับ modifier เช่น หวานน้อย เพิ่มช็อต
+- [ ] เพิ่ม confirmation/empty state ที่ polish กว่านี้
+
+**Quick Service `/order/:qr_token`**
+- [x] โหลดเมนูจาก QR ร้านแบบ public
+- [x] ส่งออเดอร์และออกเลขคิว
+- [x] แสดงสถานะคิวสำหรับรับเอง
+- [ ] ใช้ shared mobile menu components ชุดเดียวกับ dine-in
+- [ ] เพิ่ม customer phone optional สำหรับติดตามคิว
+- [ ] ปรับ pickup status ให้เห็นเด่นบนมือถือและจอ pickup
+
 ### 3. `/restaurant/kitchen` — Kitchen Display
 - แสดง ticket แบบ Kanban: pending | cooking | done
 - ลาก / กดเปลี่ยนสถานะ
