@@ -17,6 +17,14 @@ Smoke test:
 bash scripts/fnb-smoke.sh
 ```
 
+Latest automated smoke result: PASS on 2026-06-02.
+
+- Quick Service: public menu -> public order -> public status -> kitchen pending/cooking/done -> authenticated pickup queue.
+- Dine-in: staff create table -> public table QR order -> kitchen pending/cooking/done -> staff mark served -> public bill request -> authenticated checkout/receipt.
+- Latest run IDs:
+  - quick-service session `43cf4255-46d6-429c-9d46-e157a38e09bb`, queue `016`, ticket `5f13854c-947d-4d65-9cb3-bca2a68871e4`
+  - dine-in session `2d283a5c-7b5b-4eb4-89fa-f78d79cffd10`, ticket `64cc4735-5a7c-4d8a-a002-d71c92fc780b`, checkout total `178.00`
+
 ## Test Result Legend
 
 | Mark | Meaning |
@@ -126,3 +134,4 @@ bash scripts/fnb-smoke.sh
 - Customer pages are public and require no login.
 - Staff pages require logged-in staff with branch context.
 - For mobile testing on same Wi-Fi, use the Mac LAN IP instead of `localhost`.
+- Automated smoke covers API/business flow; still run visual manual checks for mobile layout, table map badges, checkout warning copy, and pickup display readability before production.

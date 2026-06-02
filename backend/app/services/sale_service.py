@@ -359,6 +359,8 @@ class SaleService:
             product = row["product"]
             variant = row["variant"]
             assert isinstance(product, Product)
+            if product.product_type in ("menu_item", "raw_material"):
+                continue
             balance = await self.stock_service._get_or_create_balance(
                 company_id=company_id,
                 branch_id=branch_id,

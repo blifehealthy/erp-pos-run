@@ -619,7 +619,7 @@ class DiningService:
                     user_id=user_id,
                     location_id=first_location.id,
                     opening_cash=Decimal("0"),
-                    shift_number=f"FB-AUTO-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
+                    shift_number=f"FB{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
                 )
                 self.db.add(resolved_shift)
                 await self.db.flush()

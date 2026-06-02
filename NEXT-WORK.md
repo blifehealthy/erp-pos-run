@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: Staff order control, checkout warning, and reusable demo menu seed
+- Recent completed feature: Restaurant E2E smoke coverage and F&B checkout hardening
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -84,6 +84,12 @@ Last updated: 2026-06-02
   - Backend validates status order: pending -> cooking -> done -> served.
   - Session Detail can mark done items as served.
   - Kitchen Display still advances tickets through the same guarded flow.
+- F&B E2E smoke now covers both Quick Service and Dine-in:
+  - Quick Service public QR menu/order/status, kitchen pending -> cooking -> done, and authenticated pickup queue.
+  - Dine-in staff table creation, public QR order/status, kitchen pending -> cooking -> done, served workflow, public bill request, and authenticated checkout/receipt.
+- F&B checkout hardening:
+  - Auto-created F&B cashier shift number now fits the database column.
+  - POS sale stock movement now skips `menu_item` and `raw_material`, matching the F&B design where recipe/ingredient usage is estimated separately.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -107,21 +113,28 @@ Known build warnings still present:
 Docker stack was rebuilt/restarted after the latest frontend/backend changes:
 
 ```bash
-docker compose up -d --build frontend nginx
+docker compose up -d --build backend
 curl -s http://localhost/health
+bash scripts/fnb-smoke.sh
 ```
 
-Result: health returned `{"status":"ok","version":"1.0.0"}`.
+Result:
+
+- health returned `{"status":"ok","version":"1.0.0"}`
+- `bash scripts/fnb-smoke.sh` passed:
+  - quick-service session `43cf4255-46d6-429c-9d46-e157a38e09bb`, queue `016`
+  - dine-in session `2d283a5c-7b5b-4eb4-89fa-f78d79cffd10`, checkout total `178.00`
 
 ## Next Work To Do
 
 Start here next session.
 
-### 1. Test F&B End-to-End Flow
+### 1. Manual Visual UAT For Restaurant Screens
 
-- Run a manual dine-in flow: create/open table -> customer/staff order -> kitchen transitions -> served -> checkout -> receipt.
-- Run a manual quick-service flow: QR order -> kitchen transitions -> pickup display -> checkout/order history.
-- Note any UI friction or missing staff actions before moving to broader POS polish.
+- Use the now-passing `bash scripts/fnb-smoke.sh` as the business-flow baseline.
+- Manually inspect mobile dine-in and quick-service pages on 320px/390px widths.
+- Manually inspect Table Map badges, Kitchen Display filters, Pickup Display readability, Session Detail served/cancel controls, and checkout receipt copy.
+- Note UI friction before moving to recipe/cost work.
 
 Reference checklist:
 
