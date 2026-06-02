@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ChefHat,
   ChevronRight,
+  Clock3,
   Loader2,
   ReceiptText,
   Utensils
@@ -43,30 +44,54 @@ type OrderStatus = {
   session_id: string;
   queue_number: number | null;
   session_status: string;
-  items: { id: string; product_name: string; qty: number; status: string }[];
+  items: { id: string; product_name: string; qty: number; status: string; special_request?: string | null }[];
 };
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pending: { label: "รอรับออเดอร์", color: "bg-amber-100 text-amber-800" },
   cooking: { label: "กำลังทำ", color: "bg-sky-100 text-sky-800" },
   done: { label: "พร้อมเสิร์ฟ", color: "bg-emerald-100 text-emerald-800" },
-  served: { label: "เสิร์ฟแล้ว", color: "bg-slate-100 text-slate-600" }
+  served: { label: "เสิร์ฟแล้ว", color: "bg-slate-100 text-slate-600" },
+  cancelled: { label: "ยกเลิก", color: "bg-red-100 text-red-700" }
 };
+
+function getErrorMessage(error: unknown): string | null {
+  if (!error) return null;
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail ?? error.response?.data?.error?.message;
+    if (typeof detail === "string") return detail;
+  }
+  return error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ";
+}
+
+function readCartCache(token?: string): CartItem[] {
+  if (!token) return [];
+  const raw = localStorage.getItem(`dining-cart-${token}`);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as CartItem[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem(`dining-cart-${token}`);
+    return [];
+  }
+}
 
 export default function CustomerMenuPage(): JSX.Element {
   const { token } = useParams<{ token: string }>();
   const queryClient = useQueryClient();
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => readCartCache(token));
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [showMenu, setShowMenu] = useState(true);
   const [note, setNote] = useState("");
   const [customProduct, setCustomProduct] = useState<MenuItem | null>(null);
   const [customOptions, setCustomOptions] = useState<string[]>([]);
   const [customNote, setCustomNote] = useState("");
   const audioRef = useRef<AudioContext | null>(null);
+  const notifiedDoneSessionRef = useRef<string | null>(null);
 
   const menuQuery = useQuery({
     queryKey: ["public-menu", token],
@@ -75,6 +100,15 @@ export default function CustomerMenuPage(): JSX.Element {
   });
 
   const menu = menuQuery.data;
+
+  useEffect(() => {
+    if (!token) return;
+    if (cart.length > 0) {
+      localStorage.setItem(`dining-cart-${token}`, JSON.stringify(cart));
+    } else {
+      localStorage.removeItem(`dining-cart-${token}`);
+    }
+  }, [cart, token]);
 
   useEffect(() => {
     const stored = localStorage.getItem(`dining-session-${token}`);
@@ -89,7 +123,7 @@ export default function CustomerMenuPage(): JSX.Element {
     queryKey: ["order-status", sessionId],
     queryFn: async () =>
       (await axios.get(`/api/public/menu/${token}/status?session_id=${sessionId}`)).data.data as OrderStatus,
-    enabled: Boolean(sessionId) && orderPlaced,
+    enabled: Boolean(sessionId),
     refetchInterval: 8_000
   });
 
@@ -97,6 +131,8 @@ export default function CustomerMenuPage(): JSX.Element {
     const items = statusQuery.data?.items ?? [];
     const allDone = items.length > 0 && items.every((item) => item.status === "done" || item.status === "served");
     if (!allDone) return;
+    if (statusQuery.data?.session_id === notifiedDoneSessionRef.current) return;
+    notifiedDoneSessionRef.current = statusQuery.data?.session_id ?? null;
 
     if (!audioRef.current) audioRef.current = new AudioContext();
     const ctx = audioRef.current;
@@ -128,7 +164,7 @@ export default function CustomerMenuPage(): JSX.Element {
       localStorage.setItem(`dining-session-${token}`, data.session_id);
       setCart([]);
       setCartOpen(false);
-      setOrderPlaced(true);
+      setShowMenu(false);
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["order-status"] });
     }
@@ -188,6 +224,9 @@ export default function CustomerMenuPage(): JSX.Element {
   const queueNum = orderStatus?.queue_number ?? menuQuery.data?.queue_number;
   const hasOrderItems = (orderStatus?.items ?? []).length > 0;
   const allDone = hasOrderItems && (orderStatus?.items ?? []).every((item) => item.status === "done" || item.status === "served");
+  const canOrder = !orderStatus || orderStatus.session_status === "open";
+  const orderError = getErrorMessage(orderMutation.error);
+  const billError = getErrorMessage(billMutation.error);
 
   if (menuQuery.isLoading) {
     return (
@@ -246,12 +285,18 @@ export default function CustomerMenuPage(): JSX.Element {
           </div>
         </section>
 
-        {orderPlaced && orderStatus ? (
+        {orderError || billError ? (
+          <section className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            {orderError || billError}
+          </section>
+        ) : null}
+
+        {orderStatus ? (
           <section className={`mx-4 mt-4 rounded-2xl border p-4 shadow-sm ${allDone ? "border-emerald-200 bg-emerald-50" : "border-sky-200 bg-sky-50"}`}>
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className={`text-base font-bold ${allDone ? "text-emerald-900" : "text-sky-900"}`}>
-                  {allDone ? "อาหารพร้อมเสิร์ฟแล้ว" : "สถานะออเดอร์"}
+                  {orderStatus.session_status === "bill_requested" ? "เรียกบิลแล้ว" : allDone ? "อาหารพร้อมเสิร์ฟแล้ว" : "สถานะออเดอร์"}
                 </p>
                 <p className={`mt-0.5 text-xs ${allDone ? "text-emerald-700" : "text-sky-700"}`}>
                   อัปเดตอัตโนมัติทุก 8 วินาที
@@ -276,17 +321,24 @@ export default function CustomerMenuPage(): JSX.Element {
                 <span className="font-semibold">พนักงานจะนำอาหารไปเสิร์ฟที่โต๊ะ</span>
               </div>
             ) : null}
+            {orderStatus.session_status === "bill_requested" ? (
+              <div className="mt-3 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-slate-700">
+                <Clock3 className="h-5 w-5" />
+                <span className="font-semibold">พนักงานกำลังเตรียมปิดบิล ไม่สามารถสั่งเพิ่มได้</span>
+              </div>
+            ) : null}
             <button
               type="button"
               className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-sky-700"
-              onClick={() => setOrderPlaced(false)}
+              disabled={!canOrder}
+              onClick={() => setShowMenu(true)}
             >
               สั่งเพิ่ม <ChevronRight className="h-4 w-4" />
             </button>
           </section>
         ) : null}
 
-        {!orderPlaced ? (
+        {showMenu && canOrder ? (
           <>
             <MenuSearch value={searchTerm} onChange={setSearchTerm} />
             <CategoryTabs categories={menu.categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />

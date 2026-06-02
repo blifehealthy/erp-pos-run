@@ -26,27 +26,57 @@ type QSMenu = {
 };
 type CartItem = MobileCartItem<MenuItem>;
 type OrderResult = { session_id: string; queue_number: number | null; queue_display: string | null };
-type OrderStatus = { session_id: string; queue_number: number | null; session_status: string; items: { id: string; product_name: string; qty: number; status: string }[] };
+type OrderStatus = { session_id: string; queue_number: number | null; session_status: string; items: { id: string; product_name: string; qty: number; status: string; special_request?: string | null }[] };
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pending: { label: "รอรับออเดอร์", color: "bg-amber-100 text-amber-800" },
   cooking: { label: "กำลังเตรียม", color: "bg-sky-100 text-sky-800" },
   done: { label: "พร้อมรับ", color: "bg-emerald-100 text-emerald-800" },
-  served: { label: "รับแล้ว", color: "bg-slate-100 text-slate-600" }
+  served: { label: "รับแล้ว", color: "bg-slate-100 text-slate-600" },
+  cancelled: { label: "ยกเลิก", color: "bg-red-100 text-red-700" }
 };
+
+function getErrorMessage(error: unknown): string | null {
+  if (!error) return null;
+  if (axios.isAxiosError(error)) {
+    const detail = error.response?.data?.detail ?? error.response?.data?.error?.message;
+    if (typeof detail === "string") return detail;
+  }
+  return error instanceof Error ? error.message : "ทำรายการไม่สำเร็จ";
+}
+
+function readCartCache(token?: string): CartItem[] {
+  if (!token) return [];
+  const raw = localStorage.getItem(`qs-cart-${token}`);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as CartItem[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    localStorage.removeItem(`qs-cart-${token}`);
+    return [];
+  }
+}
 
 export default function QuickServicePage(): JSX.Element {
   const { token } = useParams<{ token: string }>();
   const queryClient = useQueryClient();
   const audioRef = useRef<AudioContext | null>(null);
+  const notifiedDoneSessionRef = useRef<string | null>(null);
 
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => readCartCache(token));
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [orderResult, setOrderResult] = useState<OrderResult | null>(() => {
     const raw = localStorage.getItem(`qs-order-${token}`);
-    return raw ? JSON.parse(raw) as OrderResult : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as OrderResult;
+    } catch {
+      localStorage.removeItem(`qs-order-${token}`);
+      return null;
+    }
   });
   const [note, setNote] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -73,9 +103,20 @@ export default function QuickServicePage(): JSX.Element {
   const menu = menuQuery.data;
 
   useEffect(() => {
+    if (!token) return;
+    if (cart.length > 0) {
+      localStorage.setItem(`qs-cart-${token}`, JSON.stringify(cart));
+    } else {
+      localStorage.removeItem(`qs-cart-${token}`);
+    }
+  }, [cart, token]);
+
+  useEffect(() => {
     const items = orderStatus?.items ?? [];
     const allDone = items.length > 0 && items.every((item) => item.status === "done" || item.status === "served");
     if (!allDone) return;
+    if (orderStatus?.session_id === notifiedDoneSessionRef.current) return;
+    notifiedDoneSessionRef.current = orderStatus?.session_id ?? null;
 
     if (!audioRef.current) audioRef.current = new AudioContext();
     const ctx = audioRef.current;
@@ -148,6 +189,7 @@ export default function QuickServicePage(): JSX.Element {
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotal = cart.reduce((sum, item) => sum + item.product.selling_price * item.qty, 0);
   const allDone = (orderStatus?.items ?? []).length > 0 && (orderStatus?.items ?? []).every((item) => item.status === "done" || item.status === "served");
+  const orderError = getErrorMessage(orderMutation.error);
 
   if (menuQuery.isLoading) {
     return <div className="flex min-h-screen items-center justify-center bg-slate-50"><Loader2 className="h-8 w-8 animate-spin text-slate-700" /></div>;
@@ -191,6 +233,12 @@ export default function QuickServicePage(): JSX.Element {
             </div>
           </div>
         </section>
+
+        {orderError ? (
+          <section className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+            {orderError}
+          </section>
+        ) : null}
 
         {orderResult && orderStatus ? (
           <section className={`mx-4 mt-4 rounded-2xl border p-4 shadow-sm ${allDone ? "border-emerald-200 bg-emerald-50" : "border-sky-200 bg-sky-50"}`}>

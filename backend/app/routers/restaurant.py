@@ -645,6 +645,12 @@ async def public_order_status(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     svc = DiningService(db)
+    table = await svc.get_table_by_token(qr_token)
+    if not table:
+        raise HTTPException(status_code=404, detail="ไม่พบ QR นี้")
+    session = await db.get(DiningSession, session_id)
+    if not session or session.table_id != table.id:
+        raise HTTPException(status_code=404, detail="ไม่พบ session")
     result = await svc.get_public_order_status(session_id)
     if not result:
         raise HTTPException(status_code=404, detail="ไม่พบ session")
@@ -795,6 +801,9 @@ async def qs_order_status(
     settings = await _get_qs_settings(db, qs_token)
     if not settings:
         raise HTTPException(status_code=404, detail="ไม่พบ QR นี้")
+    session = await db.get(DiningSession, session_id)
+    if not session or session.branch_id != settings.branch_id or session.table_id is not None:
+        raise HTTPException(status_code=404, detail="ไม่พบ session")
     svc = DiningService(db)
     result = await svc.get_public_order_status(session_id)
     if not result:

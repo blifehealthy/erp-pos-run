@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: QR preview/print improvements
+- Recent completed feature: Customer mobile ordering polish and refresh-safe status/cart
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -19,6 +19,8 @@ Last updated: 2026-06-02
 - Restaurant mobile ordering UI was shared between dine-in and quick service.
 - Dine-in QR customer page has menu search, category tabs, item detail/options, cart sheet, order status, and bill request.
 - Quick service QR page has menu search, customer phone, order submission, and queue status.
+- Customer mobile ordering now persists carts per QR token, restores order/queue status after refresh, shows readable backend errors, and avoids repeating completion sounds on every polling refresh.
+- Public order status endpoints now validate that the requested session belongs to the scanned table QR or quick-service branch token.
 - Staff restaurant pages were improved:
   - Table Map summary and bill-requested visibility
   - Kitchen Display urgent/old-first sorting

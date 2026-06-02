@@ -206,7 +206,10 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] แยก shared mobile menu components ใช้ร่วมกับ Quick Service
 - [x] เพิ่ม search menu บน mobile
 - [x] เพิ่ม item detail/options สำหรับ modifier เช่น หวานน้อย เพิ่มช็อต
-- [ ] เพิ่ม confirmation/empty state ที่ polish กว่านี้
+- [x] เพิ่ม confirmation/empty state ที่ polish กว่านี้
+- [x] จดจำตะกร้าตาม QR token เพื่อกันรายการหายเมื่อ refresh
+- [x] แสดงสถานะออเดอร์เดิมหลัง refresh และล็อกสั่งเพิ่มเมื่อเรียกบิลแล้ว
+- [x] แสดง backend error บนหน้าลูกค้าแบบอ่านเข้าใจ
 
 **Quick Service `/order/:qr_token`**
 - [x] โหลดเมนูจาก QR ร้านแบบ public
@@ -215,6 +218,9 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] ใช้ shared mobile menu components ชุดเดียวกับ dine-in
 - [x] เพิ่ม customer phone optional สำหรับติดตามคิว
 - [x] ปรับ pickup status ให้เห็นเด่นบนมือถือและจอ pickup
+- [x] จดจำตะกร้าตาม QR token และกู้สถานะคิวเดิมหลัง refresh
+- [x] กัน localStorage เสียทำให้หน้า public order พัง
+- [x] แสดง backend error บนหน้าลูกค้าแบบอ่านเข้าใจ
 
 **Staff Displays**
 - [x] ปรับ Kitchen Display ให้เรียงรายการเก่าก่อนและแสดงงานเกิน 10 นาที

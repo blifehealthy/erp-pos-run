@@ -1,4 +1,4 @@
-import { ChevronRight, Minus, Plus, Search, ShoppingCart, Utensils, X } from "lucide-react";
+import { ChevronRight, Minus, Plus, Search, ShoppingCart, Trash2, Utensils, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 export type MobileMenuItem = {
@@ -134,7 +134,7 @@ type MenuItemRowProps<TProduct extends MobileMenuItem> = {
 
 export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem, onAdd, onCustomize, onQtyChange }: MenuItemRowProps<TProduct>): JSX.Element {
   return (
-    <div className="flex items-stretch gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div className={`flex items-stretch gap-3 rounded-2xl border bg-white p-3 shadow-sm ${product.is_available ? "border-slate-200" : "border-slate-200 opacity-65"}`}>
       {product.image_url ? (
         <img src={product.image_url} alt={product.name} className="h-20 w-20 flex-shrink-0 rounded-xl object-cover" />
       ) : (
@@ -146,7 +146,10 @@ export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem
         <p className="line-clamp-2 font-semibold leading-snug text-slate-950">{product.name}</p>
         {product.description ? <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{product.description}</p> : null}
         <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="text-base font-bold text-emerald-700">{formatCurrency(Number(product.selling_price))}</p>
+          <div>
+            <p className="text-base font-bold text-emerald-700">{formatCurrency(Number(product.selling_price))}</p>
+            {!product.is_available ? <p className="mt-0.5 text-xs font-semibold text-red-600">หมดชั่วคราว</p> : null}
+          </div>
           {cartItem ? (
             <QuantityControl
               label={product.name}
@@ -364,13 +367,14 @@ export function CartSheet<TProduct extends MobileMenuItem>({
   if (!open) return null;
 
   const total = cart.reduce((sum, item) => sum + item.product.selling_price * item.qty, 0);
+  const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
 
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-white">
       <div className="mx-auto flex w-full max-w-lg items-center justify-between border-b px-4 py-4">
         <div>
           <h2 className="text-lg font-bold text-slate-950">{title}</h2>
-          <p className="text-sm text-slate-500">{subtitle}</p>
+          <p className="text-sm text-slate-500">{cartCount > 0 ? subtitle : "ยังไม่มีรายการในตะกร้า"}</p>
         </div>
         <button type="button" aria-label="ปิดตะกร้า" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
           <X className="h-5 w-5" />
@@ -379,12 +383,19 @@ export function CartSheet<TProduct extends MobileMenuItem>({
 
       <div className="mx-auto w-full max-w-lg flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {extraFields}
+        {cart.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center">
+            <ShoppingCart className="mx-auto mb-3 h-8 w-8 text-slate-400" />
+            <p className="font-semibold text-slate-800">ตะกร้าว่างอยู่</p>
+            <p className="mt-1 text-sm text-slate-500">กลับไปเลือกเมนู แล้วค่อยส่งออเดอร์</p>
+          </div>
+        ) : null}
         {cart.map((item) => (
           <div key={item.product.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold text-slate-950">{item.product.name}</p>
-              <button type="button" aria-label={`ลบ ${item.product.name}`} onClick={() => onRemove(item.product.id)} className="text-slate-400">
-                <X className="h-4 w-4" />
+              <button type="button" aria-label={`ลบ ${item.product.name}`} onClick={() => onRemove(item.product.id)} className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                <Trash2 className="h-4 w-4" />
               </button>
             </div>
             <div className="mt-2 flex items-center justify-between">
@@ -398,7 +409,7 @@ export function CartSheet<TProduct extends MobileMenuItem>({
             </div>
             <input
               className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
-              placeholder="หมายเหตุเพิ่มเติม เช่น ไม่ใส่น้ำตาล"
+              placeholder="หมายเหตุรายเมนู เช่น ไม่ใส่น้ำตาล"
               value={item.special_request}
               onChange={(event) => onItemNoteChange(item.product.id, event.target.value)}
             />
@@ -421,7 +432,7 @@ export function CartSheet<TProduct extends MobileMenuItem>({
           </div>
           <button
             type="button"
-            disabled={isSubmitting}
+            disabled={isSubmitting || cart.length === 0}
             onClick={onSubmit}
             className="h-14 w-full rounded-2xl bg-slate-950 text-lg font-bold text-white shadow-sm disabled:opacity-60"
           >
@@ -434,7 +445,7 @@ export function CartSheet<TProduct extends MobileMenuItem>({
 }
 
 type StatusListProps = {
-  items: { id: string; product_name: string; qty: number; status: string }[];
+  items: { id: string; product_name: string; qty: number; status: string; special_request?: string | null }[];
   labels: Record<string, { label: string; color: string }>;
 };
 
@@ -442,11 +453,16 @@ export function StatusList({ items, labels }: StatusListProps): JSX.Element {
   return (
     <div className="mt-4 space-y-2">
       {items.map((item) => (
-        <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl bg-white/80 px-3 py-2 text-sm">
-          <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{item.product_name} x{item.qty}</span>
-          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${labels[item.status]?.color ?? "bg-slate-100 text-slate-600"}`}>
-            {labels[item.status]?.label ?? item.status}
-          </span>
+        <div key={item.id} className="rounded-xl bg-white/80 px-3 py-2 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="min-w-0 flex-1 truncate font-medium text-slate-700">{item.product_name} x{item.qty}</span>
+            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${labels[item.status]?.color ?? "bg-slate-100 text-slate-600"}`}>
+              {labels[item.status]?.label ?? item.status}
+            </span>
+          </div>
+          {item.special_request ? (
+            <p className="mt-1 truncate text-xs text-slate-500">หมายเหตุ: {item.special_request}</p>
+          ) : null}
         </div>
       ))}
     </div>
