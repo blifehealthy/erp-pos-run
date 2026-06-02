@@ -43,7 +43,7 @@ class DiningService:
         for t in rows:
             active_session = await self.db.scalar(
                 select(DiningSession)
-                .where(DiningSession.table_id == t.id, DiningSession.status == "open")
+                .where(DiningSession.table_id == t.id, DiningSession.status.in_(["open", "bill_requested"]))
                 .limit(1)
             )
             result.append(TableRead(
@@ -142,6 +142,10 @@ class DiningService:
 
     async def request_bill(self, session: DiningSession) -> DiningSession:
         session.status = "bill_requested"
+        if session.table_id:
+            table = await self.db.get(DiningTable, session.table_id)
+            if table:
+                table.status = "bill_requested"
         await self.db.commit()
         await self.db.refresh(session)
         return session

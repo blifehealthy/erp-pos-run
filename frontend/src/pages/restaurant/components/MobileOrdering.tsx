@@ -1,4 +1,4 @@
-import { ChevronRight, Minus, Plus, ShoppingCart, Utensils, X } from "lucide-react";
+import { ChevronRight, Minus, Plus, Search, ShoppingCart, Utensils, X } from "lucide-react";
 import type { ReactNode } from "react";
 
 export type MobileMenuItem = {
@@ -22,6 +22,52 @@ export type MobileCartItem<TProduct extends MobileMenuItem = MobileMenuItem> = {
 
 export function formatCurrency(value: number): string {
   return `฿${value.toFixed(0)}`;
+}
+
+export function filterMenuProducts<TProduct extends MobileMenuItem>(
+  products: TProduct[],
+  categoryId: string,
+  searchTerm: string
+): TProduct[] {
+  const normalized = searchTerm.trim().toLowerCase();
+  return products.filter((product) => {
+    const categoryMatched = !categoryId || product.category_id === categoryId;
+    if (!categoryMatched) return false;
+    if (!normalized) return true;
+    return `${product.name} ${product.description ?? ""} ${product.category_name ?? ""}`.toLowerCase().includes(normalized);
+  });
+}
+
+type MenuSearchProps = {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+};
+
+export function MenuSearch({ value, onChange, placeholder = "ค้นหาเมนู" }: MenuSearchProps): JSX.Element {
+  return (
+    <div className="px-4 pt-4">
+      <label className="relative block">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input
+          className="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-10 text-sm outline-none shadow-sm placeholder:text-slate-400 focus:border-slate-400"
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {value ? (
+          <button
+            type="button"
+            aria-label="ล้างคำค้นหา"
+            onClick={() => onChange("")}
+            className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-slate-100 text-slate-500"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : null}
+      </label>
+    </div>
+  );
 }
 
 type CategoryTabsProps = {
@@ -82,10 +128,11 @@ type MenuItemRowProps<TProduct extends MobileMenuItem> = {
   product: TProduct;
   cartItem?: MobileCartItem<TProduct>;
   onAdd: (product: TProduct) => void;
+  onCustomize?: (product: TProduct) => void;
   onQtyChange: (productId: string, delta: number) => void;
 };
 
-export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem, onAdd, onQtyChange }: MenuItemRowProps<TProduct>): JSX.Element {
+export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem, onAdd, onCustomize, onQtyChange }: MenuItemRowProps<TProduct>): JSX.Element {
   return (
     <div className="flex items-stretch gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       {product.image_url ? (
@@ -108,15 +155,27 @@ export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem
               onIncrease={() => onQtyChange(product.id, 1)}
             />
           ) : (
-            <button
-              type="button"
-              disabled={!product.is_available}
-              onClick={() => onAdd(product)}
-              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm disabled:bg-slate-200 disabled:text-slate-500"
-            >
-              {product.is_available ? "เพิ่ม" : "หมด"}
-              {product.is_available ? <Plus className="h-4 w-4" /> : null}
-            </button>
+            <div className="flex items-center gap-2">
+              {onCustomize ? (
+                <button
+                  type="button"
+                  disabled={!product.is_available}
+                  onClick={() => onCustomize(product)}
+                  className="h-10 rounded-full border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm disabled:text-slate-400"
+                >
+                  ตัวเลือก
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={!product.is_available}
+                onClick={() => onAdd(product)}
+                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                {product.is_available ? "เพิ่ม" : "หมด"}
+                {product.is_available ? <Plus className="h-4 w-4" /> : null}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -129,10 +188,11 @@ type MenuListProps<TProduct extends MobileMenuItem> = {
   cart: MobileCartItem<TProduct>[];
   onAdd: (product: TProduct) => void;
   onQtyChange: (productId: string, delta: number) => void;
+  onCustomize?: (product: TProduct) => void;
   emptyLabel?: string;
 };
 
-export function MenuList<TProduct extends MobileMenuItem>({ products, cart, onAdd, onQtyChange, emptyLabel = "ยังไม่มีเมนูในหมวดนี้" }: MenuListProps<TProduct>): JSX.Element {
+export function MenuList<TProduct extends MobileMenuItem>({ products, cart, onAdd, onQtyChange, onCustomize, emptyLabel = "ยังไม่มีเมนูในหมวดนี้" }: MenuListProps<TProduct>): JSX.Element {
   return (
     <div className="space-y-3 px-4 py-4">
       {products.length === 0 ? (
@@ -148,8 +208,94 @@ export function MenuList<TProduct extends MobileMenuItem>({ products, cart, onAd
           cartItem={cart.find((item) => item.product.id === product.id)}
           onAdd={onAdd}
           onQtyChange={onQtyChange}
+          onCustomize={onCustomize}
         />
       ))}
+    </div>
+  );
+}
+
+export const DEFAULT_MODIFIER_OPTIONS = [
+  "ไม่หวาน",
+  "หวานน้อย",
+  "หวานปกติ",
+  "เพิ่มช็อต",
+  "ไม่ใส่น้ำแข็ง",
+  "แยกน้ำแข็ง",
+  "ไม่ใส่ผัก",
+  "เผ็ดน้อย"
+];
+
+type ItemDetailSheetProps<TProduct extends MobileMenuItem> = {
+  product: TProduct | null;
+  note: string;
+  selectedOptions: string[];
+  options?: string[];
+  onNoteChange: (value: string) => void;
+  onToggleOption: (option: string) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+};
+
+export function ItemDetailSheet<TProduct extends MobileMenuItem>({
+  product,
+  note,
+  selectedOptions,
+  options = DEFAULT_MODIFIER_OPTIONS,
+  onNoteChange,
+  onToggleOption,
+  onClose,
+  onSubmit
+}: ItemDetailSheetProps<TProduct>): JSX.Element | null {
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col bg-white">
+      <div className="mx-auto flex w-full max-w-lg items-center justify-between border-b px-4 py-4">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-bold text-slate-950">{product.name}</h2>
+          <p className="text-sm font-semibold text-emerald-700">{formatCurrency(Number(product.selling_price))}</p>
+        </div>
+        <button type="button" aria-label="ปิดตัวเลือก" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700">
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      <div className="mx-auto w-full max-w-lg flex-1 overflow-y-auto px-4 py-4">
+        {product.image_url ? (
+          <img src={product.image_url} alt={product.name} className="mb-4 aspect-[16/9] w-full rounded-2xl object-cover" />
+        ) : null}
+        {product.description ? <p className="mb-4 text-sm leading-relaxed text-slate-600">{product.description}</p> : null}
+        <p className="mb-2 text-sm font-semibold text-slate-900">ตัวเลือกเร็ว</p>
+        <div className="flex flex-wrap gap-2">
+          {options.map((option) => {
+            const selected = selectedOptions.includes(option);
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onToggleOption(option)}
+                className={`rounded-full px-3 py-2 text-sm font-semibold ${selected ? "bg-slate-950 text-white" : "border border-slate-200 bg-white text-slate-700"}`}
+              >
+                {option}
+              </button>
+            );
+          })}
+        </div>
+        <textarea
+          className="mt-4 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+          placeholder="หมายเหตุเพิ่มเติม เช่น แยกซอส ไม่ใส่หอม"
+          value={note}
+          rows={4}
+          onChange={(event) => onNoteChange(event.target.value)}
+        />
+      </div>
+      <div className="border-t px-4 py-4">
+        <div className="mx-auto max-w-lg">
+          <button type="button" onClick={onSubmit} className="h-14 w-full rounded-2xl bg-slate-950 text-lg font-bold text-white shadow-sm">
+            เพิ่มลงตะกร้า
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

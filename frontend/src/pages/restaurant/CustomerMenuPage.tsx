@@ -14,8 +14,11 @@ import {
   CartBar,
   CartSheet,
   CategoryTabs,
+  ItemDetailSheet,
   MenuList,
+  MenuSearch,
   StatusList,
+  filterMenuProducts,
   formatCurrency,
   type MobileCartItem,
   type MobileMenuItem
@@ -56,9 +59,13 @@ export default function CustomerMenuPage(): JSX.Element {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [note, setNote] = useState("");
+  const [customProduct, setCustomProduct] = useState<MenuItem | null>(null);
+  const [customOptions, setCustomOptions] = useState<string[]>([]);
+  const [customNote, setCustomNote] = useState("");
   const audioRef = useRef<AudioContext | null>(null);
 
   const menuQuery = useQuery({
@@ -132,13 +139,21 @@ export default function CustomerMenuPage(): JSX.Element {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["order-status"] })
   });
 
-  function addToCart(product: MenuItem): void {
+  function buildSpecialRequest(options: string[], customText: string): string {
+    return [...options, customText.trim()].filter(Boolean).join(", ");
+  }
+
+  function addToCart(product: MenuItem, specialRequest = ""): void {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
-        return prev.map((item) => item.product.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+        return prev.map((item) => item.product.id === product.id ? {
+          ...item,
+          qty: item.qty + 1,
+          special_request: specialRequest || item.special_request
+        } : item);
       }
-      return [...prev, { product, qty: 1, special_request: "" }];
+      return [...prev, { product, qty: 1, special_request: specialRequest }];
     });
   }
 
@@ -163,8 +178,8 @@ export default function CustomerMenuPage(): JSX.Element {
   }
 
   const visibleProducts = useMemo(
-    () => (menu?.products ?? []).filter((product) => !selectedCategory || product.category_id === selectedCategory),
-    [menu?.products, selectedCategory]
+    () => filterMenuProducts(menu?.products ?? [], selectedCategory, searchTerm),
+    [menu?.products, searchTerm, selectedCategory]
   );
 
   const cartTotal = cart.reduce((sum, item) => sum + item.product.selling_price * item.qty, 0);
@@ -273,8 +288,13 @@ export default function CustomerMenuPage(): JSX.Element {
 
         {!orderPlaced ? (
           <>
+            <MenuSearch value={searchTerm} onChange={setSearchTerm} />
             <CategoryTabs categories={menu.categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
-            <MenuList products={visibleProducts} cart={cart} onAdd={addToCart} onQtyChange={updateQty} />
+            <MenuList products={visibleProducts} cart={cart} onAdd={addToCart} onQtyChange={updateQty} onCustomize={(product) => {
+              setCustomProduct(product);
+              setCustomOptions([]);
+              setCustomNote("");
+            }} />
           </>
         ) : null}
       </main>
@@ -295,6 +315,21 @@ export default function CustomerMenuPage(): JSX.Element {
         onItemNoteChange={updateItemNote}
         onNoteChange={setNote}
         onSubmit={() => orderMutation.mutate()}
+      />
+      <ItemDetailSheet
+        product={customProduct}
+        note={customNote}
+        selectedOptions={customOptions}
+        onNoteChange={setCustomNote}
+        onToggleOption={(option) => setCustomOptions((prev) => prev.includes(option) ? prev.filter((item) => item !== option) : [...prev, option])}
+        onClose={() => setCustomProduct(null)}
+        onSubmit={() => {
+          if (!customProduct) return;
+          addToCart(customProduct, buildSpecialRequest(customOptions, customNote));
+          setCustomProduct(null);
+          setCustomOptions([]);
+          setCustomNote("");
+        }}
       />
     </div>
   );

@@ -7,8 +7,11 @@ import {
   CartBar,
   CartSheet,
   CategoryTabs,
+  ItemDetailSheet,
   MenuList,
+  MenuSearch,
   StatusList,
+  filterMenuProducts,
   type MobileCartItem,
   type MobileMenuItem
 } from "@/pages/restaurant/components/MobileOrdering";
@@ -40,12 +43,17 @@ export default function QuickServicePage(): JSX.Element {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [orderResult, setOrderResult] = useState<OrderResult | null>(() => {
     const raw = localStorage.getItem(`qs-order-${token}`);
     return raw ? JSON.parse(raw) as OrderResult : null;
   });
   const [note, setNote] = useState("");
   const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customProduct, setCustomProduct] = useState<MenuItem | null>(null);
+  const [customOptions, setCustomOptions] = useState<string[]>([]);
+  const [customNote, setCustomNote] = useState("");
 
   const menuQuery = useQuery({
     queryKey: ["qs-menu", token],
@@ -88,6 +96,7 @@ export default function QuickServicePage(): JSX.Element {
     mutationFn: async () => {
       const params = new URLSearchParams();
       if (customerName.trim()) params.set("customer_name", customerName.trim());
+      if (customerPhone.trim()) params.set("customer_phone", customerPhone.trim());
       const res = await axios.post(`/api/public/qs/${token}/orders?${params}`, {
         items: cart.map((item) => ({ product_id: item.product.id, qty: item.qty, special_request: item.special_request || null })),
         note: note || null
@@ -101,21 +110,26 @@ export default function QuickServicePage(): JSX.Element {
       setCartOpen(false);
       setNote("");
       setCustomerName("");
+      setCustomerPhone("");
       queryClient.invalidateQueries({ queryKey: ["qs-status"] });
     }
   });
 
   const visibleProducts = useMemo(
-    () => (menu?.products ?? []).filter((product) => !selectedCategory || product.category_id === selectedCategory),
-    [menu?.products, selectedCategory]
+    () => filterMenuProducts(menu?.products ?? [], selectedCategory, searchTerm),
+    [menu?.products, searchTerm, selectedCategory]
   );
 
-  function addToCart(product: MenuItem): void {
+  function buildSpecialRequest(options: string[], customText: string): string {
+    return [...options, customText.trim()].filter(Boolean).join(", ");
+  }
+
+  function addToCart(product: MenuItem, specialRequest = ""): void {
     setCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       return existing
-        ? prev.map((item) => item.product.id === product.id ? { ...item, qty: item.qty + 1 } : item)
-        : [...prev, { product, qty: 1, special_request: "" }];
+        ? prev.map((item) => item.product.id === product.id ? { ...item, qty: item.qty + 1, special_request: specialRequest || item.special_request } : item)
+        : [...prev, { product, qty: 1, special_request: specialRequest }];
     });
   }
 
@@ -215,8 +229,13 @@ export default function QuickServicePage(): JSX.Element {
 
         {!orderResult ? (
           <>
+            <MenuSearch value={searchTerm} onChange={setSearchTerm} />
             <CategoryTabs categories={menu.categories} selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
-            <MenuList products={visibleProducts} cart={cart} onAdd={addToCart} onQtyChange={updateQty} />
+            <MenuList products={visibleProducts} cart={cart} onAdd={addToCart} onQtyChange={updateQty} onCustomize={(product) => {
+              setCustomProduct(product);
+              setCustomOptions([]);
+              setCustomNote("");
+            }} />
           </>
         ) : null}
       </main>
@@ -232,9 +251,15 @@ export default function QuickServicePage(): JSX.Element {
         submitLabel="ส่งออเดอร์"
         isSubmitting={orderMutation.isPending}
         extraFields={
-          <div>
-            <p className="mb-1 text-xs font-medium text-slate-500">ชื่อผู้สั่ง (ไม่บังคับ)</p>
-            <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400" placeholder="เช่น คุณแจ้" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-500">ชื่อผู้สั่ง (ไม่บังคับ)</p>
+              <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400" placeholder="เช่น คุณแจ้" value={customerName} onChange={(event) => setCustomerName(event.target.value)} />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-medium text-slate-500">เบอร์โทร (ไม่บังคับ)</p>
+              <input className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400" inputMode="tel" placeholder="สำหรับติดตามคิว" value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} />
+            </div>
           </div>
         }
         onClose={() => setCartOpen(false)}
@@ -243,6 +268,21 @@ export default function QuickServicePage(): JSX.Element {
         onItemNoteChange={updateItemNote}
         onNoteChange={setNote}
         onSubmit={() => orderMutation.mutate()}
+      />
+      <ItemDetailSheet
+        product={customProduct}
+        note={customNote}
+        selectedOptions={customOptions}
+        onNoteChange={setCustomNote}
+        onToggleOption={(option) => setCustomOptions((prev) => prev.includes(option) ? prev.filter((item) => item !== option) : [...prev, option])}
+        onClose={() => setCustomProduct(null)}
+        onSubmit={() => {
+          if (!customProduct) return;
+          addToCart(customProduct, buildSpecialRequest(customOptions, customNote));
+          setCustomProduct(null);
+          setCustomOptions([]);
+          setCustomNote("");
+        }}
       />
     </div>
   );
