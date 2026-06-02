@@ -32,6 +32,9 @@ Last updated: 2026-06-02
 - Checkout warning now links staff back to Session Detail or Kitchen Display when items are still pending/cooking.
 - Demo F&B menu can be seeded repeatedly with:
   `docker compose exec backend python -m app.utils.seed_fnb_demo`
+- F&B smoke script is available:
+  `bash scripts/fnb-smoke.sh`
+- Restaurant UAT checklist is available in `UAT-RESTAURANT.md`.
 - Staff restaurant pages were improved:
   - Table Map summary and bill-requested visibility
   - Table Map QR-new/kitchen/ready counts

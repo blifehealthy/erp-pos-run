@@ -1,0 +1,115 @@
+# UAT Test Cases - Restaurant / F&B
+
+**Date:** 2026-06-02  
+**Environment:** Local Docker stack at `http://localhost`
+
+## Quick Setup
+
+Run the local stack, then seed demo menu:
+
+```bash
+docker compose exec backend python -m app.utils.seed_fnb_demo
+```
+
+Smoke test:
+
+```bash
+bash scripts/fnb-smoke.sh
+```
+
+## Test Result Legend
+
+| Mark | Meaning |
+|---|---|
+| PASS | Passed |
+| FAIL | Failed |
+| PARTIAL | Passed with issue |
+| SKIP | Skipped |
+
+## TC-FB-01 Table Setup And QR
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 01.1 | Open `/restaurant/tables` | Table Map loads and shows table summary | | |
+| 01.2 | Create a new table | Table appears with status `ว่าง` | | |
+| 01.3 | Open QR dialog for a table | QR and customer URL are visible | | |
+| 01.4 | Copy QR link | Link copies successfully | | |
+| 01.5 | Open copied link in browser/mobile | Customer menu loads without login | | |
+
+## TC-FB-02 Dine-In Customer Ordering
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 02.1 | Open a table session from Table Map | Table becomes occupied and has queue/session | | |
+| 02.2 | Open `/menu/:qr_token` | Branch, table, categories, and menu items show | | |
+| 02.3 | Search menu and filter category | Menu list filters correctly | | |
+| 02.4 | Add item with special request | Cart shows item, qty, note, and total | | |
+| 02.5 | Submit order | Cart clears and order status appears | | |
+| 02.6 | Refresh customer page | Order status remains visible | | |
+| 02.7 | Add another order from same QR | Order is added to same session | | |
+
+## TC-FB-03 Quick Service Customer Ordering
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 03.1 | Open `/order/:qs_token` | Quick Service menu loads without login | | |
+| 03.2 | Add item and optional customer name/phone | Cart captures item and customer info | | |
+| 03.3 | Submit order | Queue number appears | | |
+| 03.4 | Refresh customer page | Queue status remains visible | | |
+| 03.5 | Start new order | Previous queue is cleared and menu returns | | |
+
+## TC-FB-04 Kitchen Display
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 04.1 | Open `/restaurant/kitchen` | Pending/cooking/done columns load | | |
+| 04.2 | Place dine-in or quick-service order | Ticket appears in `รอทำ` | | |
+| 04.3 | Use source filter `โต๊ะ` / `รับเอง` | Ticket list filters correctly | | |
+| 04.4 | Click `เริ่มทำ` | Ticket moves to `กำลังทำ`; customer status updates | | |
+| 04.5 | Click `เสร็จแล้ว` | Ticket moves to `เสร็จแล้ว`; customer sees ready/done | | |
+| 04.6 | Item has special request | Request is visually prominent | | |
+
+## TC-FB-05 Staff Session Detail
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 05.1 | Open active session detail | Customer/source/order context appears | | |
+| 05.2 | Check status board | Items are grouped by pending/cooking/done/served | | |
+| 05.3 | QR order is pending | QR-new warning/badge appears | | |
+| 05.4 | Mark done item as served | Item moves to served status | | |
+| 05.5 | Cancel item with reason | Item is cancelled and removed from totals | | |
+| 05.6 | Add order by staff | New order goes to kitchen and appears in session | | |
+
+## TC-FB-06 Table Map Staff Awareness
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 06.1 | Customer submits QR order | Table card shows `QR ใหม่` count | | |
+| 06.2 | Kitchen starts cooking | Table card shows `ค้างครัว` count | | |
+| 06.3 | Kitchen marks done | Table card shows `พร้อมเสิร์ฟ` count | | |
+| 06.4 | Customer requests bill | Table status becomes `เรียกบิล` | | |
+
+## TC-FB-07 Checkout
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 07.1 | Open checkout while items pending/cooking | Warning appears with links to session/kitchen | | |
+| 07.2 | Open checkout while items done but not served | Ready-not-served warning appears | | |
+| 07.3 | Pay by cash exact amount | Checkout succeeds and receipt appears | | |
+| 07.4 | Pay by transfer/card with reference | Reference is saved in receipt/payment | | |
+| 07.5 | After checkout | Session closes and table returns available | | |
+
+## TC-FB-08 Pickup Display
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 08.1 | Open `/restaurant/pickup` | Pickup display loads | | |
+| 08.2 | Quick-service item marked done | Queue appears as ready | | |
+| 08.3 | Multiple ready queues exist | First queue is most prominent | | |
+| 08.4 | Item marked served | Queue disappears from ready list | | |
+
+## Notes
+
+- Customer pages are public and require no login.
+- Staff pages require logged-in staff with branch context.
+- For mobile testing on same Wi-Fi, use the Mac LAN IP instead of `localhost`.

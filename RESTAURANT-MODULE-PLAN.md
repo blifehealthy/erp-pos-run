@@ -262,6 +262,10 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] เพิ่ม script `python -m app.utils.seed_fnb_demo` สำหรับสร้างเมนูทดสอบ 4 หมวด / 12 รายการ
 - ใช้ซ้ำได้ผ่าน backend container: `docker compose exec backend python -m app.utils.seed_fnb_demo`
 
+### Test Coverage / UAT
+- [x] เพิ่ม smoke script `scripts/fnb-smoke.sh` สำหรับ flow seed menu → quick service order → kitchen ticket → customer status
+- [x] เพิ่ม UAT checklist ร้านอาหารใน `UAT-RESTAURANT.md`
+
 ### 5. `/restaurant/reports/ingredients` — Ingredient Report
 - ยอดใช้วัตถุดิบรายกะ/รายวัน
 - เทียบ theoretical vs stock count จริง
