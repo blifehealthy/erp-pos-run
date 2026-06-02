@@ -233,6 +233,13 @@ class SessionCheckoutResult(BaseSchema):
     paid_amount: Decimal
     change_amount: Decimal
     session_id: uuid.UUID
+    table_name: str | None = None
+    queue_number: int | None = None
+    source_type: str = "dine_in"
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    payment_method: str
+    note: str | None = None
 
 
 # ── Public Menu (QR) ──────────────────────────────────────────────────────────

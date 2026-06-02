@@ -621,9 +621,9 @@ class DiningService:
         customer_name = payload.customer_name or session.customer_name
         customer_phone = payload.customer_phone or session.customer_phone
 
-        note_parts = []
-        if full_session.table and hasattr(full_session.table, "name"):
-            pass  # table name จะถูก denormalize ไว้ใน order number
+        note_parts = ["F&B"]
+        source_type = "quick_service" if session.table_id is None else "dine_in"
+        note_parts.append("Quick Service" if source_type == "quick_service" else "Dine-in")
         if session.queue_number:
             note_parts.append(f"คิว {str(session.queue_number).zfill(3)}")
         table = await self.db.get(DiningTable, session.table_id) if session.table_id else None
@@ -661,6 +661,13 @@ class DiningService:
             paid_amount=sale_order.paid_amount,
             change_amount=sale_order.change_amount,
             session_id=session.id,
+            table_name=table.name if table else None,
+            queue_number=session.queue_number,
+            source_type=source_type,
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+            payment_method=payload.payment_method,
+            note=sale_order.note,
         )
 
     async def get_public_order_status(self, session_id: uuid.UUID) -> PublicOrderStatus | None:

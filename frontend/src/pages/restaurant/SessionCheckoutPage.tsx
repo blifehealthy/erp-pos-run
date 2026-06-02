@@ -14,11 +14,27 @@ import type { CashierShift } from "@/types/pos";
 import type { StockLocation } from "@/types/stock";
 
 type SessionItem = { id: string; product_name: string; qty: number; unit_price: number; special_request: string | null; status: string };
-type SessionData = { id: string; status: string; queue_number: number | null; table_name?: string; customer_name: string | null; customer_phone: string | null; orders: { id: string; status: string; items: SessionItem[] }[] };
-type CheckoutResult = { sale_order_id: string; order_number: string; total_amount: number; paid_amount: number; change_amount: number };
+type SessionOrder = { id: string; status: string; source?: string; order_number?: string; items: SessionItem[] };
+type SessionData = { id: string; status: string; queue_number: number | null; table_name?: string; customer_name: string | null; customer_phone: string | null; orders: SessionOrder[] };
+type CheckoutResult = {
+  sale_order_id: string;
+  order_number: string;
+  total_amount: number;
+  paid_amount: number;
+  change_amount: number;
+  session_id: string;
+  table_name: string | null;
+  queue_number: number | null;
+  source_type: "dine_in" | "quick_service" | string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  payment_method: PaymentMethod;
+  note: string | null;
+};
 
 type PaymentMethod = "cash" | "promptpay" | "credit_card" | "bank_transfer" | "other";
 const PAYMENT_LABELS: Record<PaymentMethod, string> = { cash: "เงินสด", promptpay: "PromptPay", credit_card: "บัตรเครดิต", bank_transfer: "โอนเงิน", other: "อื่นๆ" };
+const SOURCE_LABELS: Record<string, string> = { dine_in: "Dine-in", quick_service: "Quick Service" };
 
 export default function SessionCheckoutPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -69,6 +85,10 @@ export default function SessionCheckoutPage(): JSX.Element {
   const changeAmount = paymentMethod === "cash" ? Math.max(paidAmount - totalAfterDiscount, 0) : 0;
   const outstandingCount = allItems.filter((item) => item.status === "pending" || item.status === "cooking").length;
   const isDineIn = Boolean(session?.table_name);
+  const sourceSummary = useMemo(() => {
+    if (!session) return "";
+    return [...new Set(session.orders.map((order) => order.source).filter(Boolean))].join(", ");
+  }, [session]);
 
   const quickAmounts = useMemo(() => {
     const ceil100 = Math.ceil(totalAfterDiscount / 100) * 100;
@@ -121,8 +141,35 @@ export default function SessionCheckoutPage(): JSX.Element {
             <p className="mt-1 text-slate-500">{checkoutResult.order_number}</p>
 
             <div ref={receiptRef} className="mt-6 rounded-2xl border border-slate-200 p-4 text-left text-sm space-y-2">
-              <div className="flex justify-between"><span>ยอดรวม</span><span>{formatThaiCurrency(checkoutResult.total_amount)}</span></div>
-              <div className="flex justify-between font-bold text-base border-t pt-2">
+              <div className="space-y-1 border-b border-dashed border-slate-200 pb-3 text-xs text-slate-600">
+                <div className="flex justify-between"><span>ประเภท</span><span>{SOURCE_LABELS[checkoutResult.source_type] ?? checkoutResult.source_type}</span></div>
+                {checkoutResult.table_name ? <div className="flex justify-between"><span>โต๊ะ</span><span>{checkoutResult.table_name}</span></div> : null}
+                {checkoutResult.queue_number ? <div className="flex justify-between"><span>คิว</span><span>{String(checkoutResult.queue_number).padStart(3, "0")}</span></div> : null}
+                {sourceSummary ? <div className="flex justify-between"><span>ช่องทางสั่ง</span><span>{sourceSummary}</span></div> : null}
+                <div className="flex justify-between"><span>ลูกค้า</span><span>{checkoutResult.customer_name || "ลูกค้าทั่วไป"}</span></div>
+                {checkoutResult.customer_phone ? <div className="flex justify-between"><span>เบอร์โทร</span><span>{checkoutResult.customer_phone}</span></div> : null}
+              </div>
+
+              <div className="space-y-2 border-b border-dashed border-slate-200 pb-3">
+                {allItems.map((item) => (
+                  <div key={item.id} className="grid grid-cols-[1fr_auto] gap-3">
+                    <div>
+                      <p className="font-medium text-slate-900">{item.product_name}</p>
+                      <p className="text-xs text-slate-500">
+                        {item.qty} × {formatThaiCurrency(item.unit_price)}
+                      </p>
+                      {item.special_request ? <p className="text-xs text-amber-600">{item.special_request}</p> : null}
+                    </div>
+                    <div className="text-right font-medium">{formatThaiCurrency(item.qty * item.unit_price)}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-between"><span>วิธีชำระ</span><span>{PAYMENT_LABELS[checkoutResult.payment_method] ?? checkoutResult.payment_method}</span></div>
+              {creditRef.trim() ? <div className="flex justify-between"><span>อ้างอิง</span><span>{creditRef.trim()}</span></div> : null}
+              <div className="flex justify-between"><span>ยอดรวม</span><span>{formatThaiCurrency(subtotal)}</span></div>
+              {discount > 0 ? <div className="flex justify-between"><span>ส่วนลด</span><span>{formatThaiCurrency(discount)}</span></div> : null}
+              <div className="flex justify-between font-bold text-base border-t border-slate-200 pt-2">
                 <span>ยอดสุทธิ</span><span>{formatThaiCurrency(checkoutResult.total_amount)}</span>
               </div>
               <div className="flex justify-between"><span>รับเงิน</span><span>{formatThaiCurrency(checkoutResult.paid_amount)}</span></div>
@@ -131,6 +178,7 @@ export default function SessionCheckoutPage(): JSX.Element {
                   <span>เงินทอน</span><span>{formatThaiCurrency(checkoutResult.change_amount)}</span>
                 </div>
               )}
+              {checkoutResult.note ? <p className="border-t border-dashed border-slate-200 pt-2 text-xs text-slate-500">{checkoutResult.note}</p> : null}
             </div>
 
             <div className="mt-6 flex gap-3">

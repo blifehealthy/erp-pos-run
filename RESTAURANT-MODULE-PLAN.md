@@ -233,7 +233,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] ปรับ Checkout ให้ส่ง reference no สำหรับบัตร/โอนและ refresh queue/table/order หลังชำระ
 - [x] เพิ่ม warning เมื่อ checkout ขณะที่ครัวยังมีรายการ pending/cooking
 - [x] เพิ่ม cancel order/item flow พร้อมเหตุผลและ sync ticket ครัว
-- [ ] เพิ่ม receipt detail สำหรับ F&B ให้แสดงโต๊ะ/คิว/source ครบ
+- [x] เพิ่ม receipt detail สำหรับ F&B ให้แสดงโต๊ะ/คิว/source/customer/payment ครบ
 
 ### 3. `/restaurant/kitchen` — Kitchen Display
 - แสดง ticket แบบ Kanban: pending | cooking | done

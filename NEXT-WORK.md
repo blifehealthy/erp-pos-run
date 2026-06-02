@@ -52,6 +52,10 @@ Last updated: 2026-06-02
   - Cancellation requires a reason.
   - Served items cannot be cancelled.
   - Cancelled items are excluded from F&B totals and synced to kitchen tickets.
+- F&B checkout receipt detail was added:
+  - Receipt result includes table name, queue number, source type, customer info, payment method, and note.
+  - Checkout success screen shows F&B context and ordered item lines.
+  - SaleOrder note includes F&B source context.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -87,7 +91,6 @@ Start here next session.
 
 ### 1. Continue F&B Order Lifecycle
 
-- Add F&B receipt details showing table/queue/source.
 - Review kitchen status transitions and served workflow.
 
 Reference checklist:
