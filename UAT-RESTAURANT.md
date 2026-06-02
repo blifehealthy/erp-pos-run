@@ -119,6 +119,7 @@ Latest automated smoke result: PASS on 2026-06-02.
 | 07.5 | After checkout | Session closes and table returns available | | |
 | 07.6 | Quick Service order is ready on `/restaurant/orders` | Staff can click `รับเงิน` and close the queue without opening checkout detail | | |
 | 07.7 | Quick Service payment uses transfer/card/PromptPay | Staff can choose payment method, enter reference, and close the queue | | |
+| 07.8 | Print restaurant receipt | Print output shows only the thermal-style receipt with table/queue/source/items/payment/reference | | |
 
 ## TC-FB-08 Pickup Display
 

@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: Pickup Display operational polish
+- Recent completed feature: Restaurant receipt print polish
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -80,6 +80,10 @@ Last updated: 2026-06-02
   - Receipt result includes table name, queue number, source type, customer info, payment method, and note.
   - Checkout success screen shows F&B context and ordered item lines.
   - SaleOrder note includes F&B source context.
+- Restaurant receipt print polish was added:
+  - Print mode now prints only the receipt body in an 80mm thermal-friendly layout.
+  - Receipt header includes receipt title, order number, and print timestamp.
+  - PromptPay, transfer, and card payment references can be entered and shown on the receipt.
 - Kitchen status and served workflow was tightened:
   - Backend validates status order: pending -> cooking -> done -> served.
   - Session Detail can mark done items as served.
@@ -153,7 +157,6 @@ Start here next session.
 
 ### 2. Next Build Items
 
-- Add receipt print polish for restaurant checkout, especially thermal print layout and payment reference visibility.
 - Add manager/cashier/kitchen permission separation for restaurant actions.
 - Add recipe-cost readiness helpers: seed raw materials and sample recipes, plus easier raw material creation from recipe setup.
 - Add a short operations guide for staff: open shop, print QR, take orders, kitchen flow, pickup, checkout, and end-of-day checks.

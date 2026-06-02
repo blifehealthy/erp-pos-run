@@ -97,6 +97,11 @@ export default function SessionCheckoutPage(): JSX.Element {
     const ceil1000 = Math.ceil(totalAfterDiscount / 1000) * 1000;
     return [...new Set([totalAfterDiscount, ceil100, ceil500, ceil1000])];
   }, [totalAfterDiscount]);
+  const paymentReference = creditRef.trim();
+  const receiptPrintedAt = useMemo(
+    () => new Date().toLocaleString("th-TH", { dateStyle: "short", timeStyle: "short" }),
+    [checkoutResult]
+  );
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -135,14 +140,43 @@ export default function SessionCheckoutPage(): JSX.Element {
   if (checkoutResult) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-4">
+        <style>{`
+          @media print {
+            body { background: white !important; }
+            body * { visibility: hidden !important; }
+            .restaurant-print-receipt, .restaurant-print-receipt * { visibility: visible !important; }
+            .restaurant-print-receipt {
+              position: fixed !important;
+              inset: 0 auto auto 0 !important;
+              width: 80mm !important;
+              max-width: 80mm !important;
+              border: 0 !important;
+              border-radius: 0 !important;
+              box-shadow: none !important;
+              padding: 4mm !important;
+              color: #111827 !important;
+              background: white !important;
+              font-size: 11px !important;
+              line-height: 1.3 !important;
+            }
+            .restaurant-print-actions { display: none !important; }
+          }
+        `}</style>
         <div className="w-full max-w-sm">
           <div className="rounded-3xl border border-emerald-200 bg-white p-8 shadow-lg text-center">
             <CheckCircle2 className="mx-auto h-16 w-16 text-emerald-500" />
             <h2 className="mt-4 text-2xl font-bold text-slate-900">ชำระเงินสำเร็จ</h2>
             <p className="mt-1 text-slate-500">{checkoutResult.order_number}</p>
 
-            <div ref={receiptRef} className="mt-6 rounded-2xl border border-slate-200 p-4 text-left text-sm space-y-2">
+            <div ref={receiptRef} className="restaurant-print-receipt mt-6 rounded-2xl border border-slate-200 p-4 text-left text-sm space-y-2">
+              <div className="border-b border-dashed border-slate-300 pb-3 text-center">
+                <p className="text-base font-black text-slate-950">ERP-POS Restaurant</p>
+                <p className="mt-1 text-xs text-slate-500">ใบเสร็จรับเงิน</p>
+                <p className="mt-1 text-xs text-slate-500">{receiptPrintedAt}</p>
+              </div>
+
               <div className="space-y-1 border-b border-dashed border-slate-200 pb-3 text-xs text-slate-600">
+                <div className="flex justify-between"><span>เลขที่</span><span>{checkoutResult.order_number}</span></div>
                 <div className="flex justify-between"><span>ประเภท</span><span>{SOURCE_LABELS[checkoutResult.source_type] ?? checkoutResult.source_type}</span></div>
                 {checkoutResult.table_name ? <div className="flex justify-between"><span>โต๊ะ</span><span>{checkoutResult.table_name}</span></div> : null}
                 {checkoutResult.queue_number ? <div className="flex justify-between"><span>คิว</span><span>{String(checkoutResult.queue_number).padStart(3, "0")}</span></div> : null}
@@ -167,7 +201,7 @@ export default function SessionCheckoutPage(): JSX.Element {
               </div>
 
               <div className="flex justify-between"><span>วิธีชำระ</span><span>{PAYMENT_LABELS[checkoutResult.payment_method] ?? checkoutResult.payment_method}</span></div>
-              {creditRef.trim() ? <div className="flex justify-between"><span>อ้างอิง</span><span>{creditRef.trim()}</span></div> : null}
+              {paymentReference ? <div className="flex justify-between gap-3"><span>อ้างอิง</span><span className="text-right break-all">{paymentReference}</span></div> : null}
               <div className="flex justify-between"><span>ยอดรวม</span><span>{formatThaiCurrency(subtotal)}</span></div>
               {discount > 0 ? <div className="flex justify-between"><span>ส่วนลด</span><span>{formatThaiCurrency(discount)}</span></div> : null}
               <div className="flex justify-between font-bold text-base border-t border-slate-200 pt-2">
@@ -180,9 +214,10 @@ export default function SessionCheckoutPage(): JSX.Element {
                 </div>
               )}
               {checkoutResult.note ? <p className="border-t border-dashed border-slate-200 pt-2 text-xs text-slate-500">{checkoutResult.note}</p> : null}
+              <p className="border-t border-dashed border-slate-200 pt-3 text-center text-xs text-slate-500">ขอบคุณที่ใช้บริการ</p>
             </div>
 
-            <div className="mt-6 flex gap-3">
+            <div className="restaurant-print-actions mt-6 flex gap-3">
               <Button variant="outline" className="flex-1" onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> พิมพ์ใบเสร็จ
               </Button>
@@ -356,12 +391,12 @@ export default function SessionCheckoutPage(): JSX.Element {
               </div>
             )}
 
-            {/* Reference for card/transfer */}
-            {(paymentMethod === "credit_card" || paymentMethod === "bank_transfer") && (
+            {/* Reference for non-cash methods */}
+            {(paymentMethod === "promptpay" || paymentMethod === "credit_card" || paymentMethod === "bank_transfer") && (
               <div>
                 <Label className="text-xs text-slate-500">เลขอ้างอิง (ไม่บังคับ)</Label>
                 <Input className="mt-1" value={creditRef} onChange={(e) => setCreditRef(e.target.value)}
-                  placeholder={paymentMethod === "credit_card" ? "เลขอ้างอิงบัตร" : "เลขอ้างอิงการโอน"} />
+                  placeholder={paymentMethod === "credit_card" ? "เลขอ้างอิงบัตร" : paymentMethod === "promptpay" ? "เลขอ้างอิง PromptPay" : "เลขอ้างอิงการโอน"} />
               </div>
             )}
 
