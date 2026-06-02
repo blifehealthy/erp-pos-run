@@ -278,6 +278,62 @@ class DiningService:
 
         return ticket
 
+    async def cancel_order_item(self, item: DiningOrderItem, reason: str) -> DiningOrderItem:
+        if item.status == "served":
+            raise ValueError("รายการนี้เสิร์ฟแล้ว ไม่สามารถยกเลิกได้")
+        if item.status == "cancelled":
+            return item
+
+        clean_reason = reason.strip()
+        item.status = "cancelled"
+        item.special_request = f"{item.special_request or ''}\nยกเลิก: {clean_reason}".strip()
+
+        ticket = await self.db.scalar(
+            select(KitchenTicket).where(KitchenTicket.order_item_id == item.id)
+        )
+        if ticket:
+            ticket.status = "cancelled"
+
+        order = await self.db.get(DiningOrder, item.order_id)
+        if order:
+            items = (await self.db.scalars(
+                select(DiningOrderItem).where(DiningOrderItem.order_id == order.id)
+            )).all()
+            if all(row.status == "cancelled" for row in items):
+                order.status = "cancelled"
+                order.note = f"{order.note or ''}\nยกเลิก: {clean_reason}".strip()
+
+        await self.db.commit()
+        await self.db.refresh(item)
+        return item
+
+    async def cancel_order(self, order: DiningOrder, reason: str) -> DiningOrder:
+        if order.status == "cancelled":
+            return order
+
+        items = (await self.db.scalars(
+            select(DiningOrderItem).where(DiningOrderItem.order_id == order.id)
+        )).all()
+        if any(item.status == "served" for item in items):
+            raise ValueError("มีรายการที่เสิร์ฟแล้ว ไม่สามารถยกเลิกทั้งออเดอร์ได้")
+
+        clean_reason = reason.strip()
+        order.status = "cancelled"
+        order.note = f"{order.note or ''}\nยกเลิก: {clean_reason}".strip()
+        for item in items:
+            item.status = "cancelled"
+            item.special_request = f"{item.special_request or ''}\nยกเลิก: {clean_reason}".strip()
+
+        tickets = (await self.db.scalars(
+            select(KitchenTicket).where(KitchenTicket.order_item_id.in_([item.id for item in items]))
+        )).all() if items else []
+        for ticket in tickets:
+            ticket.status = "cancelled"
+
+        await self.db.commit()
+        await self.db.refresh(order)
+        return order
+
     async def _notify_pickup_if_ready(self, done_ticket: KitchenTicket) -> None:
         """ส่ง Line Notify เมื่อทุกรายการใน session พร้อมหมดแล้ว"""
         # ตรวจว่ายังมี ticket ที่ยัง pending/cooking ใน session เดียวกันไหม

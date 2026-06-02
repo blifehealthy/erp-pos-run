@@ -47,6 +47,11 @@ Last updated: 2026-06-02
   - QR dialog shows the customer-facing URL.
   - QR dialog has a copy link button.
   - Print mode prints only the QR table card.
+- Cancel order/item flow was added:
+  - Staff can cancel a whole order or a single item from Session Detail.
+  - Cancellation requires a reason.
+  - Served items cannot be cancelled.
+  - Cancelled items are excluded from F&B totals and synced to kitchen tickets.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -82,7 +87,6 @@ Start here next session.
 
 ### 1. Continue F&B Order Lifecycle
 
-- Add cancel order/item flow with required reason.
 - Add F&B receipt details showing table/queue/source.
 - Review kitchen status transitions and served workflow.
 
@@ -94,7 +98,7 @@ Files likely involved:
 
 - `backend/app/routers/restaurant.py`
 - `backend/app/services/dining_service.py`
-- `frontend/src/pages/restaurant/SessionDetailPage.tsx`
+- `frontend/src/pages/restaurant/SessionCheckoutPage.tsx`
 - `frontend/src/pages/restaurant/KitchenDisplayPage.tsx`
 
 ## Commands To Resume

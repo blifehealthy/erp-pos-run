@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { ChefHat, Clock, Phone, Plus, ReceiptText, Trash2, User, UtensilsCrossed } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { authApi } from "@/lib/api";
 import { formatThaiCurrency } from "@/lib/cartUtils";
@@ -20,21 +22,31 @@ type SessionData = {
 };
 
 type MenuProduct = { id: string; name: string; selling_price: number; category_name: string | null };
+type ApiErrorBody = { detail?: string; error?: string };
+type CancelTarget =
+  | { type: "order"; id: string; label: string }
+  | { type: "item"; id: string; label: string };
 
 const STATUS_BADGE: Record<string, string> = {
   pending: "bg-amber-100 text-amber-700",
   cooking: "bg-blue-100 text-blue-700",
   done:    "bg-emerald-100 text-emerald-700",
   served:  "bg-slate-100 text-slate-600",
+  cancelled: "bg-red-100 text-red-600",
 };
 const STATUS_LABEL: Record<string, string> = {
-  pending: "รอทำ", cooking: "กำลังทำ", done: "เสร็จแล้ว", served: "เสิร์ฟแล้ว",
+  pending: "รอทำ", cooking: "กำลังทำ", done: "เสร็จแล้ว", served: "เสิร์ฟแล้ว", cancelled: "ยกเลิก",
 };
 const SESSION_LABEL: Record<string, string> = {
   open: "กำลังสั่ง",
   bill_requested: "เรียกบิลแล้ว",
   closed: "ปิดแล้ว",
 };
+
+function getErrorMessage(error: unknown): string {
+  const axiosError = error as AxiosError<ApiErrorBody>;
+  return axiosError.response?.data?.detail ?? axiosError.response?.data?.error ?? (error instanceof Error ? error.message : "ไม่สามารถทำรายการได้");
+}
 
 export default function SessionDetailPage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -44,6 +56,8 @@ export default function SessionDetailPage(): JSX.Element {
   const [addOrderOpen, setAddOrderOpen] = useState(false);
   const [orderCart, setOrderCart] = useState<{ product: MenuProduct; qty: number; special_request: string }[]>([]);
   const [menuSearch, setMenuSearch] = useState("");
+  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const sessionQuery = useQuery({
     queryKey: ["session-detail", sessionId],
@@ -77,7 +91,36 @@ export default function SessionDetailPage(): JSX.Element {
       setAddOrderOpen(false);
       setOrderCart([]);
     },
-    onError: () => toast({ title: "เพิ่มออเดอร์ไม่สำเร็จ" }),
+    onError: (error) => toast({ title: "เพิ่มออเดอร์ไม่สำเร็จ", description: getErrorMessage(error), variant: "destructive" }),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      if (!cancelTarget) {
+        throw new Error("ไม่พบรายการที่ต้องการยกเลิก");
+      }
+      const reason = cancelReason.trim();
+      if (!reason) {
+        throw new Error("กรุณาระบุเหตุผลการยกเลิก");
+      }
+      const url = cancelTarget.type === "order"
+        ? `/restaurant/orders/${cancelTarget.id}/cancel`
+        : `/restaurant/order-items/${cancelTarget.id}/cancel`;
+      await authApi.post(url, { reason });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["session-detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["kitchen-tickets"] }),
+        queryClient.invalidateQueries({ queryKey: ["pickup-queue"] }),
+      ]);
+      toast({ title: "ยกเลิกแล้ว" });
+      setCancelTarget(null);
+      setCancelReason("");
+    },
+    onError: (error) => {
+      toast({ title: "ยกเลิกไม่สำเร็จ", description: getErrorMessage(error), variant: "destructive" });
+    },
   });
 
   const session = sessionQuery.data;
@@ -86,7 +129,7 @@ export default function SessionDetailPage(): JSX.Element {
   }
 
   const allItems = session?.orders.flatMap((o) =>
-    o.status !== "cancelled" ? o.items : []
+    o.status !== "cancelled" ? o.items.filter((item) => item.status !== "cancelled") : []
   ) ?? [];
   const totalAmount = allItems.reduce((s, i) => s + i.unit_price * i.qty, 0);
   const pendingCount = allItems.filter((item) => item.status === "pending").length;
@@ -174,6 +217,15 @@ export default function SessionDetailPage(): JSX.Element {
               <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${order.status === "cancelled" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"}`}>
                 {order.status}
               </span>
+              {session.status !== "closed" && order.status !== "cancelled" && order.items.some((item) => item.status !== "served" && item.status !== "cancelled") ? (
+                <button
+                  type="button"
+                  onClick={() => setCancelTarget({ type: "order", id: order.id, label: order.order_number ?? "ออเดอร์นี้" })}
+                  className="rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                >
+                  ยกเลิกออเดอร์
+                </button>
+              ) : null}
             </div>
             <table className="w-full text-sm">
               <tbody className="divide-y divide-slate-100">
@@ -194,6 +246,17 @@ export default function SessionDetailPage(): JSX.Element {
                         {STATUS_LABEL[item.status] ?? item.status}
                       </span>
                     </td>
+                    <td className="px-5 py-3 text-right">
+                      {session.status !== "closed" && item.status !== "served" && item.status !== "cancelled" && order.status !== "cancelled" ? (
+                        <button
+                          type="button"
+                          onClick={() => setCancelTarget({ type: "item", id: item.id, label: item.product_name })}
+                          className="rounded-lg border border-red-200 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                        >
+                          ยกเลิก
+                        </button>
+                      ) : null}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -201,7 +264,7 @@ export default function SessionDetailPage(): JSX.Element {
           </div>
         ))}
 
-        {allItems.length === 0 && !sessionQuery.isLoading && (
+        {(session?.orders.length ?? 0) === 0 && !sessionQuery.isLoading && (
           <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center text-slate-400">
             <UtensilsCrossed className="mx-auto mb-2 h-8 w-8" />
             ยังไม่มีรายการอาหาร
@@ -296,6 +359,34 @@ export default function SessionDetailPage(): JSX.Element {
           </div>
         </div>
       )}
+
+      <Dialog open={Boolean(cancelTarget)} onOpenChange={(open) => { if (!open) { setCancelTarget(null); setCancelReason(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>ยกเลิก{cancelTarget?.type === "order" ? "ออเดอร์" : "รายการ"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {cancelTarget?.label}
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-700">เหตุผลการยกเลิก</label>
+              <textarea
+                className="mt-1 min-h-[96px] w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                placeholder="เช่น ลูกค้าเปลี่ยนใจ, สั่งผิด, ของหมด"
+                value={cancelReason}
+                onChange={(event) => setCancelReason(event.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelTarget(null); setCancelReason(""); }}>ยกเลิก</Button>
+            <Button variant="destructive" disabled={!cancelReason.trim() || cancelMutation.isPending} onClick={() => cancelMutation.mutate()}>
+              {cancelMutation.isPending ? "กำลังยกเลิก..." : "ยืนยันยกเลิก"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

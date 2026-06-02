@@ -11,12 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import get_db
 from app.dependencies import TokenData, require_permission
-from app.models.restaurant import DiningTable, DiningSession, DiningOrder, KitchenTicket
+from app.models.restaurant import DiningTable, DiningSession, DiningOrder, DiningOrderItem, KitchenTicket
 from app.models.settings import BranchSettings
 from app.schemas.restaurant import (
     RecipeCreate, RecipeUpdate, IngredientUsageReport,
     TableCreate, TableUpdate, SessionOpen, PlaceOrderRequest,
-    TicketStatusUpdate, SessionCheckoutRequest,
+    CancelRequest, TicketStatusUpdate, SessionCheckoutRequest,
 )
 from app.services.dining_service import DiningService
 from app.services.recipe_service import RecipeService
@@ -338,6 +338,55 @@ async def place_order(
     )
     order = await svc.place_order(current.company_id, session.branch_id, session, payload, "staff", branch_settings)
     return ok({"id": str(order.id), "order_number": order.order_number})
+
+
+@router.post("/orders/{order_id}/cancel")
+async def cancel_order(
+    order_id: uuid.UUID,
+    payload: CancelRequest,
+    current: TokenData = Depends(require_permission("fb.menu.view")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    if not payload.reason.strip():
+        raise HTTPException(status_code=400, detail="กรุณาระบุเหตุผลการยกเลิก")
+    order = await db.get(DiningOrder, order_id)
+    if not order or order.company_id != current.company_id:
+        raise HTTPException(status_code=404, detail="ไม่พบออเดอร์")
+    session = await db.get(DiningSession, order.session_id)
+    if not session or session.status == "closed":
+        raise HTTPException(status_code=400, detail="Session ปิดแล้ว")
+    svc = DiningService(db)
+    try:
+        updated = await svc.cancel_order(order, payload.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok({"id": str(updated.id), "status": updated.status})
+
+
+@router.post("/order-items/{item_id}/cancel")
+async def cancel_order_item(
+    item_id: uuid.UUID,
+    payload: CancelRequest,
+    current: TokenData = Depends(require_permission("fb.menu.view")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    if not payload.reason.strip():
+        raise HTTPException(status_code=400, detail="กรุณาระบุเหตุผลการยกเลิก")
+    item = await db.get(DiningOrderItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="ไม่พบรายการ")
+    order = await db.get(DiningOrder, item.order_id)
+    if not order or order.company_id != current.company_id:
+        raise HTTPException(status_code=404, detail="ไม่พบออเดอร์")
+    session = await db.get(DiningSession, order.session_id)
+    if not session or session.status == "closed":
+        raise HTTPException(status_code=400, detail="Session ปิดแล้ว")
+    svc = DiningService(db)
+    try:
+        updated = await svc.cancel_order_item(item, payload.reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok({"id": str(updated.id), "status": updated.status})
 
 
 @router.post("/sessions/{session_id}/bill")

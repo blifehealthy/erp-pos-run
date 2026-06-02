@@ -160,6 +160,10 @@ class PlaceOrderRequest(BaseSchema):
     note: str | None = None
 
 
+class CancelRequest(BaseSchema):
+    reason: str
+
+
 class DiningOrderItemRead(BaseSchema):
     id: uuid.UUID
     product_id: uuid.UUID
