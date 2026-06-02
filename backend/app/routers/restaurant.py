@@ -219,6 +219,7 @@ async def list_sessions(
         result.append({
             "id": str(s.id),
             "status": s.status,
+            "source_type": "dine_in" if s.table_id else "quick_service",
             "table_name": table.name if table else None,
             "queue_number": s.queue_number,
             "customer_name": s.customer_name,
@@ -279,10 +280,14 @@ async def get_session_detail(
         "table_name": table.name if table else None,
         "customer_name": session.customer_name,
         "customer_phone": session.customer_phone,
+        "opened_at": session.opened_at.isoformat() if session.opened_at else None,
+        "closed_at": session.closed_at.isoformat() if session.closed_at else None,
         "orders": [
             {
                 "id": str(o.id),
+                "order_number": o.order_number,
                 "status": o.status,
+                "source": o.source,
                 "items": [
                     {
                         "id": str(i.id),

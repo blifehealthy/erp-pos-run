@@ -222,6 +222,14 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] ปรับ Table Map ให้เห็นจำนวนโต๊ะว่าง / มีลูกค้า / เรียกบิล
 - [x] แก้ flow เรียกบิลให้ table status และ active session แสดงใน Table Map ถูกต้อง
 
+**Order Lifecycle**
+- [x] ปรับ Session Detail ให้เห็น customer info, source, order number และสถานะรายการชัดขึ้น
+- [x] เพิ่ม filter หน้า Orders แยก โต๊ะ / Quick Service / สถานะ active / เรียกบิล / ปิดแล้ว
+- [x] ปรับ Checkout ให้ส่ง reference no สำหรับบัตร/โอนและ refresh queue/table/order หลังชำระ
+- [x] เพิ่ม warning เมื่อ checkout ขณะที่ครัวยังมีรายการ pending/cooking
+- [ ] เพิ่ม cancel order/item flow พร้อมเหตุผล
+- [ ] เพิ่ม receipt detail สำหรับ F&B ให้แสดงโต๊ะ/คิว/source ครบ
+
 ### 3. `/restaurant/kitchen` — Kitchen Display
 - แสดง ticket แบบ Kanban: pending | cooking | done
 - ลาก / กดเปลี่ยนสถานะ

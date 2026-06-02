@@ -67,6 +67,8 @@ export default function SessionCheckoutPage(): JSX.Element {
   const subtotal = allItems.reduce((sum, i) => sum + i.unit_price * i.qty, 0);
   const totalAfterDiscount = Math.max(subtotal - discount, 0);
   const changeAmount = paymentMethod === "cash" ? Math.max(paidAmount - totalAfterDiscount, 0) : 0;
+  const outstandingCount = allItems.filter((item) => item.status === "pending" || item.status === "cooking").length;
+  const isDineIn = Boolean(session?.table_name);
 
   const quickAmounts = useMemo(() => {
     const ceil100 = Math.ceil(totalAfterDiscount / 100) * 100;
@@ -83,7 +85,9 @@ export default function SessionCheckoutPage(): JSX.Element {
         location_id: locationId ?? null,
         payment_method: paymentMethod,
         paid_amount: paymentMethod === "cash" ? paidAmount : totalAfterDiscount,
-        payments: [],
+        payments: creditRef.trim()
+          ? [{ payment_method: paymentMethod, amount: totalAfterDiscount, reference_no: creditRef.trim() }]
+          : [],
         discount_amount: discount,
         customer_name: session?.customer_name ?? null,
         customer_phone: session?.customer_phone ?? null,
@@ -94,6 +98,8 @@ export default function SessionCheckoutPage(): JSX.Element {
       setCheckoutResult(result);
       queryClient.invalidateQueries({ queryKey: ["dining-tables"] });
       queryClient.invalidateQueries({ queryKey: ["dining-session"] });
+      queryClient.invalidateQueries({ queryKey: ["fb-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["pickup-queue"] });
       toast({ title: `ชำระเงินสำเร็จ — ${result.order_number}` });
     },
     onError: (err: Error) => toast({ title: "ชำระเงินไม่สำเร็จ", description: err.message }),
@@ -131,8 +137,8 @@ export default function SessionCheckoutPage(): JSX.Element {
               <Button variant="outline" className="flex-1" onClick={() => window.print()}>
                 <Printer className="mr-2 h-4 w-4" /> พิมพ์ใบเสร็จ
               </Button>
-              <Button className="flex-1 bg-orange-500 hover:bg-orange-600" onClick={() => navigate("/restaurant/tables")}>
-                กลับแผนที่โต๊ะ
+              <Button className="flex-1 bg-slate-950 hover:bg-slate-800" onClick={() => navigate(isDineIn ? "/restaurant/tables" : "/restaurant/orders")}>
+                {isDineIn ? "กลับแผนที่โต๊ะ" : "กลับออเดอร์"}
               </Button>
             </div>
           </div>
@@ -216,6 +222,12 @@ export default function SessionCheckoutPage(): JSX.Element {
               <p className="mt-1 text-xs">ระบบจะสร้างกะ F&B อัตโนมัติให้เมื่อชำระเงิน หรือเปิดกะที่หน้า POS ก่อนก็ได้</p>
             </div>
           )}
+          {outstandingCount > 0 && (
+            <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+              <p className="font-medium">ยังมี {outstandingCount} รายการที่ครัวยังทำไม่เสร็จ</p>
+              <p className="mt-1 text-xs">สามารถชำระก่อนได้หากร้านต้องการปิดบิลก่อนเสิร์ฟ</p>
+            </div>
+          )}
         </div>
 
         {/* Payment Panel */}
@@ -231,8 +243,8 @@ export default function SessionCheckoutPage(): JSX.Element {
             </div>
 
             {/* Total */}
-            <div className="rounded-2xl bg-orange-500 px-5 py-4 text-white">
-              <p className="text-xs uppercase tracking-wider text-orange-100">ยอดสุทธิ</p>
+            <div className="rounded-2xl bg-slate-950 px-5 py-4 text-white">
+              <p className="text-xs uppercase tracking-wider text-slate-300">ยอดสุทธิ</p>
               <p className="mt-1 text-3xl font-black">{formatThaiCurrency(totalAfterDiscount)}</p>
             </div>
 
@@ -243,7 +255,7 @@ export default function SessionCheckoutPage(): JSX.Element {
                 {(["cash", "promptpay", "credit_card", "bank_transfer", "other"] as PaymentMethod[]).map((m) => (
                   <button key={m} type="button"
                     onClick={() => setPaymentMethod(m)}
-                    className={`rounded-xl border px-3 py-2 text-xs font-medium transition-all ${paymentMethod === m ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
+                    className={`rounded-xl border px-3 py-2 text-xs font-medium transition-all ${paymentMethod === m ? "border-slate-950 bg-slate-950 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
                     {PAYMENT_LABELS[m]}
                   </button>
                 ))}

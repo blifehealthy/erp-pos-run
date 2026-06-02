@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ChefHat, Clock, Plus, ReceiptText, Trash2 } from "lucide-react";
+import { ChefHat, Clock, Phone, Plus, ReceiptText, Trash2, User, UtensilsCrossed } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -12,11 +12,11 @@ type SessionItem = {
   id: string; product_name: string; qty: number;
   unit_price: number; special_request: string | null; status: string;
 };
-type SessionOrder = { id: string; status: string; source: string; items: SessionItem[] };
+type SessionOrder = { id: string; order_number?: string; status: string; source: string; items: SessionItem[] };
 type SessionData = {
   id: string; status: string; queue_number: number | null; table_name: string | null;
   customer_name: string | null; customer_phone: string | null;
-  opened_at: string; orders: SessionOrder[];
+  opened_at: string; closed_at: string | null; orders: SessionOrder[];
 };
 
 type MenuProduct = { id: string; name: string; selling_price: number; category_name: string | null };
@@ -29,6 +29,11 @@ const STATUS_BADGE: Record<string, string> = {
 };
 const STATUS_LABEL: Record<string, string> = {
   pending: "รอทำ", cooking: "กำลังทำ", done: "เสร็จแล้ว", served: "เสิร์ฟแล้ว",
+};
+const SESSION_LABEL: Record<string, string> = {
+  open: "กำลังสั่ง",
+  bill_requested: "เรียกบิลแล้ว",
+  closed: "ปิดแล้ว",
 };
 
 export default function SessionDetailPage(): JSX.Element {
@@ -84,6 +89,10 @@ export default function SessionDetailPage(): JSX.Element {
     o.status !== "cancelled" ? o.items : []
   ) ?? [];
   const totalAmount = allItems.reduce((s, i) => s + i.unit_price * i.qty, 0);
+  const pendingCount = allItems.filter((item) => item.status === "pending").length;
+  const cookingCount = allItems.filter((item) => item.status === "cooking").length;
+  const readyCount = allItems.filter((item) => item.status === "done").length;
+  const servedCount = allItems.filter((item) => item.status === "served").length;
   const products = (menuQuery.data ?? []).filter((p) =>
     !menuSearch || p.name.toLowerCase().includes(menuSearch.toLowerCase())
   );
@@ -108,7 +117,7 @@ export default function SessionDetailPage(): JSX.Element {
               ].filter(Boolean).join(" — ") || "Session"
             : "..."
         }
-        subtitle={session?.customer_name ?? undefined}
+        subtitle={session ? `${SESSION_LABEL[session.status] ?? session.status}${session.customer_name ? ` · ${session.customer_name}` : ""}` : undefined}
         actions={
           session?.status !== "closed" ? (
             <div className="flex gap-2">
@@ -129,12 +138,14 @@ export default function SessionDetailPage(): JSX.Element {
       <div className="p-6 space-y-6">
         {/* Session meta */}
         {session && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
             {[
-              { label: "สถานะ", value: session.status === "open" ? "กำลังสั่ง" : session.status === "bill_requested" ? "เรียกบิลแล้ว" : "ปิดแล้ว" },
+              { label: "สถานะ", value: SESSION_LABEL[session.status] ?? session.status },
               { label: "เปิดเมื่อ", value: new Date(session.opened_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) },
               { label: "รายการ", value: `${allItems.length} รายการ` },
               { label: "ยอดรวม", value: formatThaiCurrency(totalAmount) },
+              { label: "รอ/ทำ", value: `${pendingCount + cookingCount}` },
+              { label: "พร้อม/เสิร์ฟ", value: `${readyCount + servedCount}` },
             ].map((s) => (
               <div key={s.label} className="rounded-2xl border border-slate-200 bg-white p-4">
                 <p className="text-xs text-slate-400">{s.label}</p>
@@ -144,14 +155,22 @@ export default function SessionDetailPage(): JSX.Element {
           </div>
         )}
 
+        {session && (session.customer_name || session.customer_phone) && (
+          <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">
+            {session.customer_name ? <span className="inline-flex items-center gap-2"><User className="h-4 w-4" /> {session.customer_name}</span> : null}
+            {session.customer_phone ? <span className="inline-flex items-center gap-2"><Phone className="h-4 w-4" /> {session.customer_phone}</span> : null}
+          </div>
+        )}
+
         {/* Orders */}
         {session?.orders.map((order) => (
           <div key={order.id} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 flex items-center gap-3">
               <ChefHat className="h-4 w-4 text-slate-400" />
               <span className="text-sm font-medium text-slate-600">
-                {order.source === "qr_self" ? "ลูกค้าสั่งเอง (QR)" : "Staff สั่ง"}
+                {order.source === "qr_self" ? "ลูกค้าสั่งเอง (QR)" : order.source === "kiosk" ? "Quick Service" : "Staff สั่ง"}
               </span>
+              {order.order_number ? <span className="text-xs text-slate-400">{order.order_number}</span> : null}
               <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${order.status === "cancelled" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"}`}>
                 {order.status}
               </span>
@@ -163,7 +182,7 @@ export default function SessionDetailPage(): JSX.Element {
                     <td className="px-5 py-3">
                       <p className="font-medium text-slate-900">{item.product_name}</p>
                       {item.special_request && (
-                        <p className="text-xs text-amber-600">⚠️ {item.special_request}</p>
+                        <p className="text-xs text-amber-600">{item.special_request}</p>
                       )}
                     </td>
                     <td className="px-5 py-3 text-center text-slate-600">×{item.qty}</td>
@@ -184,15 +203,16 @@ export default function SessionDetailPage(): JSX.Element {
 
         {allItems.length === 0 && !sessionQuery.isLoading && (
           <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center text-slate-400">
+            <UtensilsCrossed className="mx-auto mb-2 h-8 w-8" />
             ยังไม่มีรายการอาหาร
           </div>
         )}
 
         {/* Total */}
         {allItems.length > 0 && (
-          <div className="rounded-2xl bg-orange-50 border border-orange-200 px-5 py-4 flex justify-between items-center">
-            <span className="font-semibold text-slate-800">ยอดรวมทั้งหมด</span>
-            <span className="text-2xl font-black text-orange-600">{formatThaiCurrency(totalAmount)}</span>
+          <div className="rounded-2xl bg-slate-950 px-5 py-4 flex justify-between items-center text-white">
+            <span className="font-semibold text-slate-200">ยอดรวมทั้งหมด</span>
+            <span className="text-2xl font-black">{formatThaiCurrency(totalAmount)}</span>
           </div>
         )}
       </div>
@@ -221,13 +241,13 @@ export default function SessionDetailPage(): JSX.Element {
                   key={p.id}
                   type="button"
                   onClick={() => addToCart(p)}
-                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-orange-300 hover:bg-orange-50"
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-slate-400 hover:bg-slate-50"
                 >
                   <div>
                     <p className="font-medium text-slate-900">{p.name}</p>
                     {p.category_name && <p className="text-xs text-slate-400">{p.category_name}</p>}
                   </div>
-                  <span className="font-bold text-orange-600">{formatThaiCurrency(p.selling_price)}</span>
+                  <span className="font-bold text-emerald-700">{formatThaiCurrency(p.selling_price)}</span>
                 </button>
               ))}
             </div>
@@ -250,8 +270,8 @@ export default function SessionDetailPage(): JSX.Element {
                         className="h-7 w-7 rounded-full border text-slate-600">−</button>
                       <span className="w-6 text-center font-bold text-sm">{c.qty}</span>
                       <button type="button" onClick={() => setOrderCart((p) => p.map((x) => x.product.id === c.product.id ? { ...x, qty: x.qty + 1 } : x))}
-                        className="h-7 w-7 rounded-full bg-orange-500 text-white">+</button>
-                      <span className="ml-auto text-sm font-semibold text-orange-600">{formatThaiCurrency(c.product.selling_price * c.qty)}</span>
+                        className="h-7 w-7 rounded-full bg-slate-950 text-white">+</button>
+                      <span className="ml-auto text-sm font-semibold text-emerald-700">{formatThaiCurrency(c.product.selling_price * c.qty)}</span>
                     </div>
                     <input className="mt-2 w-full rounded-lg border border-slate-200 px-2 py-1 text-xs"
                       placeholder="หมายเหตุ" value={c.special_request}
@@ -262,10 +282,10 @@ export default function SessionDetailPage(): JSX.Element {
               <div className="border-t p-4">
                 <div className="mb-3 flex justify-between font-bold">
                   <span>รวม</span>
-                  <span className="text-orange-600">{formatThaiCurrency(orderCart.reduce((s, c) => s + c.product.selling_price * c.qty, 0))}</span>
+                  <span className="text-emerald-700">{formatThaiCurrency(orderCart.reduce((s, c) => s + c.product.selling_price * c.qty, 0))}</span>
                 </div>
                 <Button
-                  className="w-full bg-orange-500 hover:bg-orange-600"
+                  className="w-full bg-slate-950 hover:bg-slate-800"
                   disabled={orderCart.length === 0 || addOrderMutation.isPending}
                   onClick={() => addOrderMutation.mutate()}
                 >

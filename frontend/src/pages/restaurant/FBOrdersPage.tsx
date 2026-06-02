@@ -13,6 +13,7 @@ import { useAuthStore } from "@/stores/auth.store";
 type SessionRow = {
   id: string;
   status: string;
+  source_type?: "dine_in" | "quick_service";
   table_name: string | null;
   queue_number: number | null;
   customer_name: string | null;
@@ -47,6 +48,7 @@ export default function FBOrdersPage(): JSX.Element {
   const queryClient = useQueryClient();
   const branchId = useAuthStore((s) => s.branchId);
   const [filterStatus, setFilterStatus] = useState<string>("active");
+  const [filterSource, setFilterSource] = useState<string>("all");
   const [filterDate, setFilterDate] = useState(todayStr());
 
   const sessionsQuery = useQuery({
@@ -66,17 +68,25 @@ export default function FBOrdersPage(): JSX.Element {
 
   // "active" = open + bill_requested
   const sessions = useMemo(() => {
+    const bySource = allSessions.filter((session) => {
+      if (filterSource === "all") return true;
+      if (filterSource === "dine_in") return session.source_type === "dine_in" || Boolean(session.table_name);
+      if (filterSource === "quick_service") return session.source_type === "quick_service" || (!session.table_name && Boolean(session.queue_number));
+      return true;
+    });
     if (filterStatus === "active") {
-      return allSessions.filter((s) => s.status === "open" || s.status === "bill_requested");
+      return bySource.filter((s) => s.status === "open" || s.status === "bill_requested");
     }
-    return allSessions;
-  }, [allSessions, filterStatus]);
+    return bySource;
+  }, [allSessions, filterSource, filterStatus]);
 
   // Summary stats
   const stats = useMemo(() => ({
     open: allSessions.filter((s) => s.status === "open").length,
     bill_requested: allSessions.filter((s) => s.status === "bill_requested").length,
     closed: allSessions.filter((s) => s.status === "closed").length,
+    dine_in: allSessions.filter((s) => s.source_type === "dine_in" || Boolean(s.table_name)).length,
+    quick_service: allSessions.filter((s) => s.source_type === "quick_service" || (!s.table_name && Boolean(s.queue_number))).length,
     total_revenue: allSessions.filter((s) => s.status === "closed").reduce((sum, s) => sum + s.total_amount, 0),
   }), [allSessions]);
 
@@ -137,7 +147,7 @@ export default function FBOrdersPage(): JSX.Element {
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex gap-2 border-b border-slate-200 pb-3">
+        <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
           {[
             { key: "active", label: `Active (${stats.open + stats.bill_requested})` },
             { key: "open", label: `กำลังสั่ง (${stats.open})` },
@@ -151,8 +161,27 @@ export default function FBOrdersPage(): JSX.Element {
               onClick={() => setFilterStatus(tab.key)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
                 filterStatus === tab.key
-                  ? "bg-orange-500 text-white"
+                  ? "bg-slate-950 text-white"
                   : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: "all", label: `ทุกช่องทาง (${allSessions.length})` },
+            { key: "dine_in", label: `โต๊ะ (${stats.dine_in})` },
+            { key: "quick_service", label: `รับเอง (${stats.quick_service})` },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilterSource(tab.key)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
+                filterSource === tab.key ? "bg-emerald-600 text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
               }`}
             >
               {tab.label}
@@ -197,8 +226,13 @@ export default function FBOrdersPage(): JSX.Element {
                             คิว {String(session.queue_number).padStart(3, "0")}
                           </span>
                         )}
+                        {!session.table_name && (
+                          <span className="rounded-full bg-slate-900 px-3 py-0.5 text-sm font-bold text-white">
+                            รับเอง
+                          </span>
+                        )}
                         {!session.table_name && !session.queue_number && (
-                          <span className="font-bold text-slate-600">Walk-in</span>
+                          <span className="font-bold text-slate-600">Quick Service</span>
                         )}
                         <span className={`rounded-full border px-2 py-0.5 text-xs ${cfg.color}`}>{cfg.label}</span>
                       </div>
