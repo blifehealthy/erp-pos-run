@@ -286,6 +286,8 @@ async def get_session_detail(
     if not session or session.company_id != current.company_id:
         raise HTTPException(status_code=404, detail="ไม่พบ session")
     table = await db.get(DiningTable, session.table_id) if session.table_id else None
+    active_orders = [order for order in session.orders if order.status != "cancelled"]
+    active_items = [item for order in active_orders for item in order.items if item.status != "cancelled"]
     return ok({
         "id": str(session.id),
         "status": session.status,
@@ -295,12 +297,19 @@ async def get_session_detail(
         "customer_phone": session.customer_phone,
         "opened_at": session.opened_at.isoformat() if session.opened_at else None,
         "closed_at": session.closed_at.isoformat() if session.closed_at else None,
+        "pending_count": sum(item.qty for item in active_items if item.status == "pending"),
+        "cooking_count": sum(item.qty for item in active_items if item.status == "cooking"),
+        "ready_count": sum(item.qty for item in active_items if item.status == "done"),
+        "served_count": sum(item.qty for item in active_items if item.status == "served"),
+        "qr_pending_count": sum(item.qty for order in active_orders if order.source == "qr_self" for item in order.items if item.status == "pending"),
         "orders": [
             {
                 "id": str(o.id),
                 "order_number": o.order_number,
                 "status": o.status,
                 "source": o.source,
+                "note": o.note,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
                 "items": [
                     {
                         "id": str(i.id),

@@ -56,15 +56,33 @@ class DiningService:
         for t in rows:
             active_session = await self.db.scalar(
                 select(DiningSession)
+                .options(selectinload(DiningSession.orders).selectinload(DiningOrder.items))
                 .where(DiningSession.table_id == t.id, DiningSession.status.in_(["open", "bill_requested"]))
                 .limit(1)
             )
+            active_items: list[DiningOrderItem] = []
+            qr_pending_count = 0
+            if active_session:
+                for order in active_session.orders:
+                    if order.status == "cancelled":
+                        continue
+                    for item in order.items:
+                        if item.status == "cancelled":
+                            continue
+                        active_items.append(item)
+                        if order.source == "qr_self" and item.status == "pending":
+                            qr_pending_count += item.qty
             result.append(TableRead(
                 id=t.id, branch_id=t.branch_id, name=t.name, capacity=t.capacity,
                 qr_token=t.qr_token, table_type=t.table_type, status=t.status,
                 sort_order=t.sort_order, is_active=t.is_active,
                 active_session_id=active_session.id if active_session else None,
                 queue_number=active_session.queue_number if active_session else None,
+                pending_count=sum(item.qty for item in active_items if item.status == "pending"),
+                cooking_count=sum(item.qty for item in active_items if item.status == "cooking"),
+                ready_count=sum(item.qty for item in active_items if item.status == "done"),
+                served_count=sum(item.qty for item in active_items if item.status == "served"),
+                qr_pending_count=qr_pending_count,
             ))
         return result
 

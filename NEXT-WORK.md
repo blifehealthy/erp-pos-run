@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: Kitchen Display source filtering and customer-to-kitchen E2E validation
+- Recent completed feature: Staff order control, checkout warning, and reusable demo menu seed
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -27,12 +27,18 @@ Last updated: 2026-06-02
   - product `ปอเปี๊ยะทอด`
   - kitchen ticket status `pending`
 - Kitchen Display now supports source filtering for all/table/quick-service tickets, shows source badges, has a manual refresh button, larger status buttons, stronger special-request treatment, and visible error state.
+- Table Map now shows QR-new, kitchen-pending, and ready-to-serve counts on active tables.
+- Session Detail now has a status board for pending/cooking/done/served items with served/cancel actions.
+- Checkout warning now links staff back to Session Detail or Kitchen Display when items are still pending/cooking.
+- Demo F&B menu can be seeded repeatedly with:
+  `docker compose exec backend python -m app.utils.seed_fnb_demo`
 - Staff restaurant pages were improved:
   - Table Map summary and bill-requested visibility
+  - Table Map QR-new/kitchen/ready counts
   - Kitchen Display urgent/old-first sorting and source filtering
   - Pickup Display queue visibility
   - Orders filters by source/status/date
-  - Session Detail with customer/source/order context
+  - Session Detail with customer/source/order context and status board
   - Checkout invalidation and payment reference support
 - Table creation now works with real branch context:
   - TopBar auto-syncs default branch into the auth token when missing.

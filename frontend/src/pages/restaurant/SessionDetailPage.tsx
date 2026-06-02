@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
-import { ChefHat, Clock, Phone, Plus, ReceiptText, Trash2, User, UtensilsCrossed } from "lucide-react";
+import { AlertTriangle, ChefHat, Clock, Phone, Plus, ReceiptText, Trash2, User, UtensilsCrossed } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
@@ -19,6 +19,7 @@ type SessionData = {
   id: string; status: string; queue_number: number | null; table_name: string | null;
   customer_name: string | null; customer_phone: string | null;
   opened_at: string; closed_at: string | null; orders: SessionOrder[];
+  pending_count?: number; cooking_count?: number; ready_count?: number; served_count?: number; qr_pending_count?: number;
 };
 
 type MenuProduct = { id: string; name: string; selling_price: number; category_name: string | null };
@@ -42,6 +43,12 @@ const SESSION_LABEL: Record<string, string> = {
   bill_requested: "เรียกบิลแล้ว",
   closed: "ปิดแล้ว",
 };
+const SOURCE_LABEL: Record<string, string> = {
+  qr_self: "ลูกค้าสั่งเอง (QR)",
+  staff: "Staff สั่ง",
+  kiosk: "Quick Service",
+};
+const STATUS_GROUPS = ["pending", "cooking", "done", "served"] as const;
 
 function getErrorMessage(error: unknown): string {
   const axiosError = error as AxiosError<ApiErrorBody>;
@@ -148,6 +155,17 @@ export default function SessionDetailPage(): JSX.Element {
   const allItems = session?.orders.flatMap((o) =>
     o.status !== "cancelled" ? o.items.filter((item) => item.status !== "cancelled") : []
   ) ?? [];
+  const itemsWithOrder = session?.orders.flatMap((order) =>
+    order.status !== "cancelled"
+      ? order.items
+          .filter((item) => item.status !== "cancelled")
+          .map((item) => ({ ...item, order_id: order.id, order_number: order.order_number, source: order.source }))
+      : []
+  ) ?? [];
+  const groupedItems = STATUS_GROUPS.reduce<Record<string, typeof itemsWithOrder>>((acc, status) => {
+    acc[status] = itemsWithOrder.filter((item) => item.status === status);
+    return acc;
+  }, {});
   const totalAmount = allItems.reduce((s, i) => s + i.unit_price * i.qty, 0);
   const pendingCount = allItems.filter((item) => item.status === "pending").length;
   const cookingCount = allItems.filter((item) => item.status === "cooking").length;
@@ -215,6 +233,16 @@ export default function SessionDetailPage(): JSX.Element {
           </div>
         )}
 
+        {session && (session.qr_pending_count ?? 0) > 0 ? (
+          <div className="flex items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50 px-5 py-4 text-orange-800">
+            <AlertTriangle className="h-5 w-5" />
+            <div>
+              <p className="font-bold">มีออเดอร์ใหม่จาก QR {session.qr_pending_count} รายการ</p>
+              <p className="text-sm">ตรวจรายการและให้ครัวเริ่มทำจาก Kitchen Display หรือเปลี่ยนสถานะที่รายการนี้</p>
+            </div>
+          </div>
+        ) : null}
+
         {session && (session.customer_name || session.customer_phone) && (
           <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-600">
             {session.customer_name ? <span className="inline-flex items-center gap-2"><User className="h-4 w-4" /> {session.customer_name}</span> : null}
@@ -222,14 +250,73 @@ export default function SessionDetailPage(): JSX.Element {
           </div>
         )}
 
+        {allItems.length > 0 ? (
+          <div className="grid gap-3 xl:grid-cols-4">
+            {STATUS_GROUPS.map((status) => (
+              <section key={status} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className={`flex items-center justify-between border-b border-slate-100 px-4 py-3 ${STATUS_BADGE[status]}`}>
+                  <span className="font-bold">{STATUS_LABEL[status]}</span>
+                  <span className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">
+                    {groupedItems[status].reduce((sum, item) => sum + item.qty, 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 p-3">
+                  {groupedItems[status].length === 0 ? (
+                    <p className="py-6 text-center text-sm text-slate-400">ไม่มีรายการ</p>
+                  ) : null}
+                  {groupedItems[status].map((item) => (
+                    <div key={item.id} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900">{item.product_name}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {SOURCE_LABEL[item.source] ?? item.source}{item.order_number ? ` · ${item.order_number}` : ""}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-lg font-black text-slate-950">x{item.qty}</span>
+                      </div>
+                      {item.special_request ? (
+                        <p className="mt-2 rounded-lg bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800">{item.special_request}</p>
+                      ) : null}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {session?.status !== "closed" && item.status === "done" ? (
+                          <button
+                            type="button"
+                            onClick={() => itemStatusMutation.mutate({ itemId: item.id, status: "served" })}
+                            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+                          >
+                            เสิร์ฟแล้ว
+                          </button>
+                        ) : null}
+                        {session?.status !== "closed" && item.status !== "served" ? (
+                          <button
+                            type="button"
+                            onClick={() => setCancelTarget({ type: "item", id: item.id, label: item.product_name })}
+                            className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-bold text-red-600 hover:bg-red-50"
+                          >
+                            ยกเลิก
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : null}
+
         {/* Orders */}
         {session?.orders.map((order) => (
           <div key={order.id} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
             <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 flex items-center gap-3">
               <ChefHat className="h-4 w-4 text-slate-400" />
               <span className="text-sm font-medium text-slate-600">
-                {order.source === "qr_self" ? "ลูกค้าสั่งเอง (QR)" : order.source === "kiosk" ? "Quick Service" : "Staff สั่ง"}
+                {SOURCE_LABEL[order.source] ?? order.source}
               </span>
+              {order.source === "qr_self" && order.items.some((item) => item.status === "pending") ? (
+                <span className="rounded-full bg-orange-500 px-2 py-0.5 text-xs font-bold text-white">QR ใหม่</span>
+              ) : null}
               {order.order_number ? <span className="text-xs text-slate-400">{order.order_number}</span> : null}
               <span className={`ml-auto rounded-full px-2 py-0.5 text-xs ${order.status === "cancelled" ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"}`}>
                 {order.status}

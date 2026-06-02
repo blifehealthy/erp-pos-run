@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, CheckCircle2, Loader2, Printer, ReceiptText } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, ChefHat, Loader2, Printer, ReceiptText } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,7 @@ export default function SessionCheckoutPage(): JSX.Element {
   const totalAfterDiscount = Math.max(subtotal - discount, 0);
   const changeAmount = paymentMethod === "cash" ? Math.max(paidAmount - totalAfterDiscount, 0) : 0;
   const outstandingCount = allItems.filter((item) => item.status === "pending" || item.status === "cooking").length;
+  const readyNotServedCount = allItems.filter((item) => item.status === "done").length;
   const isDineIn = Boolean(session?.table_name);
   const sourceSummary = useMemo(() => {
     if (!session) return "";
@@ -271,9 +272,29 @@ export default function SessionCheckoutPage(): JSX.Element {
             </div>
           )}
           {outstandingCount > 0 && (
-            <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-              <p className="font-medium">ยังมี {outstandingCount} รายการที่ครัวยังทำไม่เสร็จ</p>
-              <p className="mt-1 text-xs">สามารถชำระก่อนได้หากร้านต้องการปิดบิลก่อนเสิร์ฟ</p>
+            <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold">ยังมี {outstandingCount} รายการที่ครัวยังทำไม่เสร็จ</p>
+                  <p className="mt-1 text-xs">ถ้าปิดบิลตอนนี้ session จะถูกปิด แต่รายการครัวอาจยังไม่พร้อมเสิร์ฟ</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/restaurant/session/${sessionId}/detail`)}>
+                      ดูรายการในโต๊ะ
+                    </Button>
+                    <Button size="sm" className="bg-slate-950 hover:bg-slate-800" onClick={() => navigate("/restaurant/kitchen")}>
+                      <ChefHat className="mr-1 h-4 w-4" />
+                      ดูครัว
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {outstandingCount === 0 && readyNotServedCount > 0 && (
+            <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <p className="font-bold">มี {readyNotServedCount} รายการพร้อมเสิร์ฟแต่ยังไม่ mark served</p>
+              <p className="mt-1 text-xs">ชำระได้ แต่ควรตรวจการเสิร์ฟก่อนปิดโต๊ะหากร้านต้องการ track served status</p>
             </div>
           )}
         </div>

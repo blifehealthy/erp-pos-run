@@ -118,6 +118,11 @@ class TableRead(BaseSchema):
     is_active: bool
     active_session_id: uuid.UUID | None = None
     queue_number: int | None = None
+    pending_count: int = 0
+    cooking_count: int = 0
+    ready_count: int = 0
+    served_count: int = 0
+    qr_pending_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

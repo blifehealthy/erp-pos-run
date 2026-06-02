@@ -25,6 +25,7 @@ type TableData = {
   id: string; name: string; capacity: number; qr_token: string;
   table_type: string; status: string; is_active: boolean;
   active_session_id: string | null; queue_number: number | null;
+  pending_count?: number; cooking_count?: number; ready_count?: number; served_count?: number; qr_pending_count?: number;
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -256,6 +257,7 @@ export default function TableMapPage(): JSX.Element {
   const occupiedCount = tables.filter((table) => table.status === "occupied").length;
   const billRequestedCount = tables.filter((table) => table.status === "bill_requested").length;
   const availableCount = tables.filter((table) => table.status === "available").length;
+  const qrNewOrderCount = tables.reduce((sum, table) => sum + (table.qr_pending_count ?? 0), 0);
 
   return (
     <div>
@@ -296,6 +298,11 @@ export default function TableMapPage(): JSX.Element {
             <p className="mt-1 text-2xl font-bold text-sky-900">{billRequestedCount}</p>
           </div>
         </div>
+        {qrNewOrderCount > 0 ? (
+          <div className="mb-5 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800">
+            มีออเดอร์ใหม่จาก QR รอครัวรับ {qrNewOrderCount} รายการ
+          </div>
+        ) : null}
 
         {tables.length === 0 && !tablesQuery.isLoading && (
           <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-slate-400">
@@ -307,7 +314,7 @@ export default function TableMapPage(): JSX.Element {
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
           {tables.map((table) => (
-            <div key={table.id} className={`rounded-2xl border-2 p-5 shadow-sm transition-all ${STATUS_STYLE[table.status] ?? "border-slate-200 bg-white"}`}>
+            <div key={table.id} className={`rounded-2xl border-2 p-5 shadow-sm transition-all ${table.qr_pending_count ? "ring-2 ring-orange-300" : ""} ${STATUS_STYLE[table.status] ?? "border-slate-200 bg-white"}`}>
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">{table.name}</h3>
@@ -364,6 +371,23 @@ export default function TableMapPage(): JSX.Element {
                   <span className="ml-2 text-2xl font-bold text-slate-950">{String(table.queue_number).padStart(3, "0")}</span>
                 </div>
               )}
+
+              {table.active_session_id ? (
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className={`rounded-xl px-2 py-2 ${table.qr_pending_count ? "bg-orange-500 text-white" : "bg-white/80 text-slate-600"}`}>
+                    <p className="font-semibold">QR ใหม่</p>
+                    <p className="text-lg font-black">{table.qr_pending_count ?? 0}</p>
+                  </div>
+                  <div className="rounded-xl bg-white/80 px-2 py-2 text-slate-600">
+                    <p className="font-semibold">ค้างครัว</p>
+                    <p className="text-lg font-black">{(table.pending_count ?? 0) + (table.cooking_count ?? 0)}</p>
+                  </div>
+                  <div className={`rounded-xl px-2 py-2 ${(table.ready_count ?? 0) > 0 ? "bg-emerald-500 text-white" : "bg-white/80 text-slate-600"}`}>
+                    <p className="font-semibold">พร้อมเสิร์ฟ</p>
+                    <p className="text-lg font-black">{table.ready_count ?? 0}</p>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
                 <button

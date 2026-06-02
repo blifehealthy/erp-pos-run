@@ -234,12 +234,15 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] เพิ่ม dialog เปิดโต๊ะพร้อมจำนวนลูกค้า ชื่อลูกค้า และเบอร์โทร
 - [x] กันการเปลี่ยนโต๊ะเป็นว่างเมื่อยังมี session เปิดอยู่
 - [x] ปรับ QR preview ให้มีลิงก์ คัดลอกลิงก์ และ print เฉพาะการ์ด QR
+- [x] เพิ่ม badge ออเดอร์ใหม่จาก QR / ค้างครัว / พร้อมเสิร์ฟ บน Table Map
 
 **Order Lifecycle**
 - [x] ปรับ Session Detail ให้เห็น customer info, source, order number และสถานะรายการชัดขึ้น
+- [x] ปรับ Session Detail ให้มี board แยก pending / cooking / done / served พร้อม action เสิร์ฟแล้ว/ยกเลิก
 - [x] เพิ่ม filter หน้า Orders แยก โต๊ะ / Quick Service / สถานะ active / เรียกบิล / ปิดแล้ว
 - [x] ปรับ Checkout ให้ส่ง reference no สำหรับบัตร/โอนและ refresh queue/table/order หลังชำระ
 - [x] เพิ่ม warning เมื่อ checkout ขณะที่ครัวยังมีรายการ pending/cooking
+- [x] ปรับ checkout warning ให้มีปุ่มกลับไปดู Session Detail หรือ Kitchen Display
 - [x] เพิ่ม cancel order/item flow พร้อมเหตุผลและ sync ticket ครัว
 - [x] เพิ่ม receipt detail สำหรับ F&B ให้แสดงโต๊ะ/คิว/source/customer/payment ครบ
 - [x] เพิ่ม guard สถานะครัวและ served workflow จาก Session Detail/Kitchen Display
@@ -254,6 +257,10 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - สร้าง/แก้ไขสูตรต่อเมนู
 - ดูต้นทุนต่อแก้ว/จาน
 - ดู gross margin
+
+### Demo F&B Menu Seed
+- [x] เพิ่ม script `python -m app.utils.seed_fnb_demo` สำหรับสร้างเมนูทดสอบ 4 หมวด / 12 รายการ
+- ใช้ซ้ำได้ผ่าน backend container: `docker compose exec backend python -m app.utils.seed_fnb_demo`
 
 ### 5. `/restaurant/reports/ingredients` — Ingredient Report
 - ยอดใช้วัตถุดิบรายกะ/รายวัน
