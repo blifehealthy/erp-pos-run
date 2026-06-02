@@ -291,6 +291,18 @@ export default function CustomerMenuPage(): JSX.Element {
           </section>
         ) : null}
 
+        {sessionId && !orderStatus && statusQuery.isLoading ? (
+          <section className="mx-4 mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 shadow-sm">
+            <div className="flex items-center gap-3 text-sky-800">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <div>
+                <p className="font-bold">กำลังโหลดสถานะออเดอร์</p>
+                <p className="text-xs text-sky-700">รอสักครู่ ระบบกำลังตรวจรายการล่าสุดของโต๊ะนี้</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {orderStatus ? (
           <section className={`mx-4 mt-4 rounded-2xl border p-4 shadow-sm ${allDone ? "border-emerald-200 bg-emerald-50" : "border-sky-200 bg-sky-50"}`}>
             <div className="flex items-start justify-between gap-3">

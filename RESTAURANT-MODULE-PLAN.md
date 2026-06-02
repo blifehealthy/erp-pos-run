@@ -210,6 +210,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] จดจำตะกร้าตาม QR token เพื่อกันรายการหายเมื่อ refresh
 - [x] แสดงสถานะออเดอร์เดิมหลัง refresh และล็อกสั่งเพิ่มเมื่อเรียกบิลแล้ว
 - [x] แสดง backend error บนหน้าลูกค้าแบบอ่านเข้าใจ
+- [x] ปรับ mobile polish สำหรับจอแคบ ปุ่มล่าง safe area และ loading state ระหว่างโหลดสถานะ
 
 **Quick Service `/order/:qr_token`**
 - [x] โหลดเมนูจาก QR ร้านแบบ public
@@ -221,6 +222,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] จดจำตะกร้าตาม QR token และกู้สถานะคิวเดิมหลัง refresh
 - [x] กัน localStorage เสียทำให้หน้า public order พัง
 - [x] แสดง backend error บนหน้าลูกค้าแบบอ่านเข้าใจ
+- [x] ปรับ mobile polish สำหรับจอแคบ ปุ่มล่าง safe area และ loading state ระหว่างโหลดคิว
 
 **Staff Displays**
 - [x] ปรับ Kitchen Display ให้เรียงรายการเก่าก่อนและแสดงงานเกิน 10 นาที

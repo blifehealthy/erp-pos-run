@@ -35,6 +35,12 @@ Last updated: 2026-06-02
 - F&B smoke script is available:
   `bash scripts/fnb-smoke.sh`
 - Restaurant UAT checklist is available in `UAT-RESTAURANT.md`.
+- Customer mobile UI was polished for narrow screens:
+  - menu thumbnails shrink on very small screens
+  - add/customize buttons use smaller mobile sizing
+  - cart and item option sheets respect safe-area bottom padding
+  - dine-in and quick-service pages show a loading panel while status is fetched
+- Playwright screenshot validation was attempted, but `npx playwright` tried to resolve unavailable `playwright@1.60.0`; use manual mobile UAT or fix Playwright package pin before screenshot automation.
 - Staff restaurant pages were improved:
   - Table Map summary and bill-requested visibility
   - Table Map QR-new/kitchen/ready counts

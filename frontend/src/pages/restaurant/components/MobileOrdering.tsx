@@ -136,16 +136,16 @@ export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem
   return (
     <div className={`flex items-stretch gap-3 rounded-2xl border bg-white p-3 shadow-sm ${product.is_available ? "border-slate-200" : "border-slate-200 opacity-65"}`}>
       {product.image_url ? (
-        <img src={product.image_url} alt={product.name} className="h-20 w-20 flex-shrink-0 rounded-xl object-cover" />
+        <img src={product.image_url} alt={product.name} className="h-16 w-16 flex-shrink-0 rounded-xl object-cover min-[380px]:h-20 min-[380px]:w-20" />
       ) : (
-        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-          <Utensils className="h-7 w-7" />
+        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 min-[380px]:h-20 min-[380px]:w-20">
+          <Utensils className="h-6 w-6 min-[380px]:h-7 min-[380px]:w-7" />
         </div>
       )}
       <div className="min-w-0 flex-1">
         <p className="line-clamp-2 font-semibold leading-snug text-slate-950">{product.name}</p>
         {product.description ? <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-slate-500">{product.description}</p> : null}
-        <div className="mt-3 flex items-center justify-between gap-3">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <p className="text-base font-bold text-emerald-700">{formatCurrency(Number(product.selling_price))}</p>
             {!product.is_available ? <p className="mt-0.5 text-xs font-semibold text-red-600">หมดชั่วคราว</p> : null}
@@ -164,7 +164,7 @@ export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem
                   type="button"
                   disabled={!product.is_available}
                   onClick={() => onCustomize(product)}
-                  className="h-10 rounded-full border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm disabled:text-slate-400"
+                  className="h-9 rounded-full border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm disabled:text-slate-400 min-[380px]:h-10 min-[380px]:text-sm"
                 >
                   ตัวเลือก
                 </button>
@@ -173,7 +173,7 @@ export function MenuItemRow<TProduct extends MobileMenuItem>({ product, cartItem
                 type="button"
                 disabled={!product.is_available}
                 onClick={() => onAdd(product)}
-                className="inline-flex h-10 items-center gap-1.5 rounded-full bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm disabled:bg-slate-200 disabled:text-slate-500"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-slate-950 px-3 text-xs font-semibold text-white shadow-sm disabled:bg-slate-200 disabled:text-slate-500 min-[380px]:h-10 min-[380px]:text-sm"
               >
                 {product.is_available ? "เพิ่ม" : "หมด"}
                 {product.is_available ? <Plus className="h-4 w-4" /> : null}
@@ -292,7 +292,7 @@ export function ItemDetailSheet<TProduct extends MobileMenuItem>({
           onChange={(event) => onNoteChange(event.target.value)}
         />
       </div>
-      <div className="border-t px-4 py-4">
+      <div className="border-t px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4">
         <div className="mx-auto max-w-lg">
           <button type="button" onClick={onSubmit} className="h-14 w-full rounded-2xl bg-slate-950 text-lg font-bold text-white shadow-sm">
             เพิ่มลงตะกร้า
@@ -315,7 +315,7 @@ export function CartBar({ count, total, onOpen }: CartBarProps): JSX.Element | n
     <button
       type="button"
       onClick={onOpen}
-      className="fixed bottom-4 left-4 right-4 z-20 mx-auto flex max-w-lg items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-xl"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-20 mx-auto flex max-w-lg items-center justify-between rounded-2xl bg-slate-950 px-4 py-4 text-white shadow-xl"
     >
       <span className="inline-flex items-center gap-2 font-semibold">
         <ShoppingCart className="h-5 w-5" />
@@ -424,7 +424,7 @@ export function CartSheet<TProduct extends MobileMenuItem>({
         />
       </div>
 
-      <div className="border-t bg-white px-4 py-4">
+      <div className="border-t bg-white px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4">
         <div className="mx-auto max-w-lg">
           <div className="mb-3 flex justify-between text-lg font-bold">
             <span>รวม</span>

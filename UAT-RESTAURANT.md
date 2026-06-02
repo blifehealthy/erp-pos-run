@@ -58,6 +58,17 @@ bash scripts/fnb-smoke.sh
 | 03.4 | Refresh customer page | Queue status remains visible | | |
 | 03.5 | Start new order | Previous queue is cleared and menu returns | | |
 
+## TC-FB-03A Customer Mobile Layout
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 03A.1 | Open dine-in customer page on 390px-wide mobile | Header, category tabs, menu cards, and cart bar do not overlap | | |
+| 03A.2 | Open dine-in customer page on 320px-wide mobile | Menu image/buttons fit without horizontal scroll | | |
+| 03A.3 | Open quick-service page on 390px-wide mobile | Queue panel and menu list fit without clipping | | |
+| 03A.4 | Open quick-service page on 320px-wide mobile | Add/customize buttons wrap cleanly and remain tappable | | |
+| 03A.5 | Open cart sheet on mobile with home indicator/safe area | Submit button remains visible above safe area | | |
+| 03A.6 | Submit order and wait for status | Loading state appears while status is being fetched | | |
+
 ## TC-FB-04 Kitchen Display
 
 | # | Step | Expected Result | Actual | Status |
