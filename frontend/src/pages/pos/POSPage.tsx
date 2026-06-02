@@ -843,13 +843,13 @@ export default function POSPage(): JSX.Element {
     }
   }
 
-  function beginExchangeFlow(
+  async function beginExchangeFlow(
     order: SaleOrder,
     refundAmount: number,
     refundReasonValue: string,
     refundedItemNames: string[],
     refundedSourceItems: Array<{ product_id: string; product_name: string }>,
-  ): void {
+  ): Promise<void> {
     if (cart.items.length > 0) {
       const ok = await confirm({ title: "เริ่มบิลแลกสินค้า", description: "มีสินค้าอยู่ในตะกร้าปัจจุบัน ต้องการล้างแล้วเริ่มบิลแลกหรือไม่", confirmLabel: "ล้างและเริ่ม", variant: "destructive" });
       if (!ok) return;
@@ -916,7 +916,7 @@ export default function POSPage(): JSX.Element {
       setPartialRefundQtys({});
       await recentSalesQuery.refetch();
       if (startExchange) {
-        beginExchangeFlow(
+        await beginExchangeFlow(
           updatedOrder,
           refundAmount,
           partialRefundReason.trim(),

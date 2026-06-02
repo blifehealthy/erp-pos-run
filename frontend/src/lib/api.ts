@@ -102,7 +102,7 @@ api.interceptors.response.use(
 
 export default api;
 
-export const authApi = {
+export const authApi = Object.assign(api, {
   login: (data: LoginRequest, companyId: string) =>
     api.post<ApiResponse<TokenResponse>>("/auth/login", data, {
       headers: { "X-Company-ID": companyId }
@@ -117,7 +117,7 @@ export const authApi = {
   switchBranch: (branchId: string) =>
     api.post<ApiResponse<TokenResponse>>("/auth/switch-branch", { branch_id: branchId }),
   myBranches: () => api.get<ApiResponse<UserBranch[]>>("/system/me/branches")
-};
+});
 
 export const systemApi = {
   permissions: () => api.get<ApiResponse<Permission[]>>("/system/permissions"),
