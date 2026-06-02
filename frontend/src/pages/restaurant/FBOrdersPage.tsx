@@ -1,6 +1,6 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowRight, Clock, ReceiptText, RefreshCw, ShoppingBag, Users, UtensilsCrossed,
+  ArrowRight, CheckCircle2, Clock, Loader2, ReceiptText, RefreshCw, ShoppingBag, Users, UtensilsCrossed,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { authApi } from "@/lib/api";
 import { formatThaiCurrency } from "@/lib/cartUtils";
 import { useAuthStore } from "@/stores/auth.store";
+import { useToast } from "@/components/ui/use-toast";
 
 type SessionRow = {
   id: string;
@@ -21,6 +22,10 @@ type SessionRow = {
   opened_at: string;
   closed_at: string | null;
   item_count: number;
+  pending_count: number;
+  cooking_count: number;
+  ready_count: number;
+  served_count: number;
   total_amount: number;
   sale_order_id: string | null;
 };
@@ -46,6 +51,7 @@ function todayStr(): string {
 export default function FBOrdersPage(): JSX.Element {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const branchId = useAuthStore((s) => s.branchId);
   const [filterStatus, setFilterStatus] = useState<string>("active");
   const [filterSource, setFilterSource] = useState<string>("all");
@@ -65,6 +71,29 @@ export default function FBOrdersPage(): JSX.Element {
   });
 
   const allSessions = sessionsQuery.data ?? [];
+
+  const quickCheckoutMutation = useMutation({
+    mutationFn: async (session: SessionRow) => {
+      const res = await authApi.post(`/restaurant/sessions/${session.id}/checkout`, {
+        shift_id: null,
+        location_id: null,
+        payment_method: "cash",
+        paid_amount: session.total_amount,
+        payments: [{ payment_method: "cash", amount: session.total_amount }],
+        discount_amount: 0,
+        customer_name: session.customer_name,
+        customer_phone: session.customer_phone,
+        note: "Quick Service cash checkout from Orders",
+      });
+      return res.data.data as { order_number: string };
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["fb-sessions"] });
+      await queryClient.invalidateQueries({ queryKey: ["pickup-queue"] });
+      toast({ title: `ปิดคิวสำเร็จ — ${result.order_number}` });
+    },
+    onError: (err: Error) => toast({ title: "ปิดคิวไม่สำเร็จ", description: err.message }),
+  });
 
   // "active" = open + bill_requested
   const sessions = useMemo(() => {
@@ -206,6 +235,10 @@ export default function FBOrdersPage(): JSX.Element {
           {sessions.map((session) => {
             const cfg = STATUS_CONFIG[session.status] ?? STATUS_CONFIG.open;
             const isBillRequested = session.status === "bill_requested";
+            const isQuickService = session.source_type === "quick_service" || (!session.table_name && Boolean(session.queue_number));
+            const outstandingCount = session.pending_count + session.cooking_count;
+            const isReadyForPickup = isQuickService && session.status !== "closed" && outstandingCount === 0 && (session.ready_count + session.served_count) > 0;
+            const isQuickCheckoutPending = quickCheckoutMutation.isPending;
 
             return (
               <div
@@ -253,6 +286,16 @@ export default function FBOrdersPage(): JSX.Element {
                             : `เปิด ${new Date(session.opened_at).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}`}
                         </span>
                         <span>{session.item_count} รายการ</span>
+                        {outstandingCount > 0 ? (
+                          <span className="rounded-full bg-orange-100 px-2 py-0.5 font-semibold text-orange-700">
+                            ค้างครัว {outstandingCount}
+                          </span>
+                        ) : isReadyForPickup ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-700">
+                            <CheckCircle2 className="h-3 w-3" />
+                            พร้อมรับ
+                          </span>
+                        ) : null}
                         <span className="font-semibold text-slate-700">{formatThaiCurrency(session.total_amount)}</span>
                       </div>
                     </div>
@@ -268,6 +311,17 @@ export default function FBOrdersPage(): JSX.Element {
                       </span>
                     ) : (
                       <>
+                        {isReadyForPickup ? (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            disabled={isQuickCheckoutPending}
+                            onClick={() => quickCheckoutMutation.mutate(session)}
+                          >
+                            {isQuickCheckoutPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <ReceiptText className="mr-1.5 h-4 w-4" />}
+                            รับเงินสด
+                          </Button>
+                        ) : null}
                         <Button
                           size="sm"
                           className={`${isBillRequested ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-700 hover:bg-slate-800"} text-white`}

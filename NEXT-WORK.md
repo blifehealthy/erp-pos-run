@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: Restaurant E2E smoke coverage and F&B checkout hardening
+- Recent completed feature: Quick Service cash checkout from staff Orders
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -93,6 +93,9 @@ Last updated: 2026-06-02
 - Recipe Management for staff now supports editing existing recipes:
   - Staff can update recipe name, yield, notes, and ingredient rows from `/restaurant/recipes`.
   - The menu item binding is locked during edit so a recipe cannot accidentally move to another product.
+- Quick Service staff checkout was shortened:
+  - `/restaurant/orders` now shows kitchen status counts for each session.
+  - Ready Quick Service queues show `พร้อมรับ` and can be closed with `รับเงินสด` directly from the Orders list.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -137,6 +140,7 @@ Start here next session.
 - Use the now-passing `bash scripts/fnb-smoke.sh` as the business-flow baseline.
 - Manually inspect mobile dine-in and quick-service pages on 320px/390px widths.
 - Manually inspect Table Map badges, Kitchen Display filters, Pickup Display readability, Session Detail served/cancel controls, and checkout receipt copy.
+- Manually inspect Quick Service `รับเงินสด` from `/restaurant/orders` after a queue reaches ready state.
 - Manually inspect `/restaurant/recipes` create/edit/delete and `/restaurant/reports/ingredients` CSV export.
 - Note UI friction before moving to recipe/cost work.
 

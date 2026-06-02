@@ -240,6 +240,10 @@ async def list_sessions(
             "opened_at": s.opened_at.isoformat(),
             "closed_at": s.closed_at.isoformat() if s.closed_at else None,
             "item_count": len(all_items),
+            "pending_count": sum(i.qty for i in all_items if i.status == "pending"),
+            "cooking_count": sum(i.qty for i in all_items if i.status == "cooking"),
+            "ready_count": sum(i.qty for i in all_items if i.status == "done"),
+            "served_count": sum(i.qty for i in all_items if i.status == "served"),
             "total_amount": round(total, 2),
             "sale_order_id": str(s.sale_order_id) if s.sale_order_id else None,
         })
