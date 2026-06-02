@@ -250,7 +250,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] เพิ่ม receipt detail สำหรับ F&B ให้แสดงโต๊ะ/คิว/source/customer/payment ครบ
 - [x] เพิ่ม guard สถานะครัวและ served workflow จาก Session Detail/Kitchen Display
 - [x] เพิ่ม smoke test ครอบคลุม Quick Service และ Dine-in E2E จนถึง pickup/served/checkout
-- [x] เพิ่ม Quick Service cash checkout จากหน้า Orders เมื่อคิวพร้อมรับแล้ว
+- [x] เพิ่ม Quick Service checkout จากหน้า Orders เมื่อคิวพร้อมรับแล้ว พร้อมเลือกวิธีชำระและ reference
 
 ### 3. `/restaurant/kitchen` — Kitchen Display
 - แสดง ticket แบบ Kanban: pending | cooking | done

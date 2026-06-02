@@ -6,6 +6,9 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { authApi } from "@/lib/api";
 import { formatThaiCurrency } from "@/lib/cartUtils";
 import { useAuthStore } from "@/stores/auth.store";
@@ -36,6 +39,16 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string 
   closed:          { label: "ปิดแล้ว",      color: "bg-slate-50 border-slate-200 text-slate-500",   dot: "bg-slate-400" },
 };
 
+type PaymentMethod = "cash" | "promptpay" | "credit_card" | "bank_transfer" | "other";
+
+const PAYMENT_LABELS: Record<PaymentMethod, string> = {
+  cash: "เงินสด",
+  promptpay: "PromptPay",
+  credit_card: "บัตร",
+  bank_transfer: "โอน",
+  other: "อื่นๆ",
+};
+
 function elapsed(openedAt: string): string {
   const diff = Math.floor((Date.now() - new Date(openedAt).getTime()) / 60000);
   if (diff < 60) return `${diff} นาที`;
@@ -56,6 +69,9 @@ export default function FBOrdersPage(): JSX.Element {
   const [filterStatus, setFilterStatus] = useState<string>("active");
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterDate, setFilterDate] = useState(todayStr());
+  const [paymentSession, setPaymentSession] = useState<SessionRow | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [paymentReference, setPaymentReference] = useState("");
 
   const sessionsQuery = useQuery({
     queryKey: ["fb-sessions", branchId, filterStatus, filterDate],
@@ -73,27 +89,58 @@ export default function FBOrdersPage(): JSX.Element {
   const allSessions = sessionsQuery.data ?? [];
 
   const quickCheckoutMutation = useMutation({
-    mutationFn: async (session: SessionRow) => {
+    mutationFn: async ({
+      session,
+      method,
+      reference,
+    }: {
+      session: SessionRow;
+      method: PaymentMethod;
+      reference: string;
+    }) => {
+      const cleanReference = reference.trim();
       const res = await authApi.post(`/restaurant/sessions/${session.id}/checkout`, {
         shift_id: null,
         location_id: null,
-        payment_method: "cash",
+        payment_method: method,
         paid_amount: session.total_amount,
-        payments: [{ payment_method: "cash", amount: session.total_amount }],
+        payments: [{
+          payment_method: method,
+          amount: session.total_amount,
+          reference_no: cleanReference || null,
+        }],
         discount_amount: 0,
         customer_name: session.customer_name,
         customer_phone: session.customer_phone,
-        note: "Quick Service cash checkout from Orders",
+        note: `Quick Service ${PAYMENT_LABELS[method]} checkout from Orders`,
       });
       return res.data.data as { order_number: string };
     },
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["fb-sessions"] });
       await queryClient.invalidateQueries({ queryKey: ["pickup-queue"] });
+      setPaymentSession(null);
+      setPaymentReference("");
+      setPaymentMethod("cash");
       toast({ title: `ปิดคิวสำเร็จ — ${result.order_number}` });
     },
     onError: (err: Error) => toast({ title: "ปิดคิวไม่สำเร็จ", description: err.message }),
   });
+
+  function openPaymentDialog(session: SessionRow): void {
+    setPaymentSession(session);
+    setPaymentMethod("cash");
+    setPaymentReference("");
+  }
+
+  function submitQuickPayment(): void {
+    if (!paymentSession) return;
+    quickCheckoutMutation.mutate({
+      session: paymentSession,
+      method: paymentMethod,
+      reference: paymentReference,
+    });
+  }
 
   // "active" = open + bill_requested
   const sessions = useMemo(() => {
@@ -316,10 +363,10 @@ export default function FBOrdersPage(): JSX.Element {
                             size="sm"
                             className="bg-emerald-600 text-white hover:bg-emerald-700"
                             disabled={isQuickCheckoutPending}
-                            onClick={() => quickCheckoutMutation.mutate(session)}
+                            onClick={() => openPaymentDialog(session)}
                           >
                             {isQuickCheckoutPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <ReceiptText className="mr-1.5 h-4 w-4" />}
-                            รับเงินสด
+                            รับเงิน
                           </Button>
                         ) : null}
                         <Button
@@ -354,6 +401,76 @@ export default function FBOrdersPage(): JSX.Element {
           })}
         </div>
       </div>
+
+      <Dialog open={Boolean(paymentSession)} onOpenChange={(open) => !open && setPaymentSession(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>รับเงิน Quick Service</DialogTitle>
+            <DialogDescription>
+              {paymentSession?.queue_number ? `คิว ${String(paymentSession.queue_number).padStart(3, "0")}` : "Quick Service"}
+              {" · "}
+              {formatThaiCurrency(paymentSession?.total_amount ?? 0)}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5">
+            <div className="rounded-2xl bg-slate-950 px-5 py-4 text-white">
+              <p className="text-xs uppercase tracking-wider text-slate-300">ยอดรับชำระ</p>
+              <p className="mt-1 text-3xl font-black">{formatThaiCurrency(paymentSession?.total_amount ?? 0)}</p>
+              {(paymentSession?.customer_name || paymentSession?.customer_phone) && (
+                <p className="mt-2 text-xs text-slate-300">
+                  {paymentSession.customer_name ?? "ลูกค้าทั่วไป"}
+                  {paymentSession.customer_phone ? ` · ${paymentSession.customer_phone}` : ""}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs text-slate-500">วิธีชำระเงิน</Label>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {(["cash", "promptpay", "bank_transfer", "credit_card", "other"] as PaymentMethod[]).map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setPaymentMethod(method)}
+                    className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-all ${
+                      paymentMethod === method
+                        ? "border-slate-950 bg-slate-950 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                    }`}
+                  >
+                    {PAYMENT_LABELS[method]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {paymentMethod !== "cash" && (
+              <div>
+                <Label className="text-xs text-slate-500">เลขอ้างอิง</Label>
+                <Input
+                  className="mt-1"
+                  value={paymentReference}
+                  onChange={(e) => setPaymentReference(e.target.value)}
+                  placeholder="เลขอ้างอิงสลิป / บัตร / รายการโอน"
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentSession(null)}>ยกเลิก</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={!paymentSession || quickCheckoutMutation.isPending}
+              onClick={submitQuickPayment}
+            >
+              {quickCheckoutMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ReceiptText className="mr-2 h-4 w-4" />}
+              ยืนยันรับเงิน
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
