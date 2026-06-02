@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AxiosError } from "axios";
-import { Bell, ConciergeBell, Plus, QrCode, ReceiptText, Users } from "lucide-react";
+import { Bell, ConciergeBell, Copy, MoreVertical, Pencil, Plus, QrCode, ReceiptText, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
@@ -9,6 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useConfirm } from "@/hooks/useConfirm";
 import { useToast } from "@/components/ui/use-toast";
 import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
@@ -41,6 +49,7 @@ function getErrorMessage(error: unknown): string {
 
 export default function TableMapPage(): JSX.Element {
   const { toast } = useToast();
+  const [confirm, confirmDialog] = useConfirm();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const branchId = useAuthStore((s) => s.branchId);
@@ -48,8 +57,13 @@ export default function TableMapPage(): JSX.Element {
   const [qrOpen, setQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrTable, setQrTable] = useState<TableData | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTable, setEditingTable] = useState<TableData | null>(null);
   const [newName, setNewName] = useState("");
   const [newCapacity, setNewCapacity] = useState("4");
+  const [editName, setEditName] = useState("");
+  const [editCapacity, setEditCapacity] = useState("4");
+  const [editStatus, setEditStatus] = useState("available");
 
   const tablesQuery = useQuery({
     queryKey: ["dining-tables", branchId],
@@ -118,6 +132,81 @@ export default function TableMapPage(): JSX.Element {
       });
     },
   });
+
+  const updateTableMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingTable) {
+        throw new Error("ไม่พบโต๊ะที่ต้องการแก้ไข");
+      }
+      const name = editName.trim();
+      const capacity = Number(editCapacity);
+      if (!name) {
+        throw new Error("กรุณากรอกชื่อโต๊ะ");
+      }
+      if (!Number.isFinite(capacity) || capacity < 1) {
+        throw new Error("จำนวนที่นั่งต้องมากกว่า 0");
+      }
+      return authApi.patch(`/restaurant/tables/${editingTable.id}`, {
+        name,
+        capacity,
+        status: editStatus,
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dining-tables"] });
+      toast({ title: "อัปเดตโต๊ะแล้ว" });
+      setEditOpen(false);
+      setEditingTable(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "อัปเดตโต๊ะไม่สำเร็จ",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deactivateTableMutation = useMutation({
+    mutationFn: async (tableId: string) => authApi.delete(`/restaurant/tables/${tableId}`),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["dining-tables"] });
+      toast({ title: "ปิดใช้งานโต๊ะแล้ว" });
+    },
+    onError: (error) => {
+      toast({
+        title: "ปิดใช้งานโต๊ะไม่สำเร็จ",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+    },
+  });
+
+  function openEdit(table: TableData): void {
+    setEditingTable(table);
+    setEditName(table.name);
+    setEditCapacity(String(table.capacity));
+    setEditStatus(table.status);
+    setEditOpen(true);
+  }
+
+  async function copyQrLink(table: TableData): Promise<void> {
+    const url = `${window.location.origin}/menu/${table.qr_token}`;
+    await navigator.clipboard.writeText(url);
+    toast({ title: "คัดลอกลิงก์ QR แล้ว", description: table.name });
+  }
+
+  async function confirmDeactivate(table: TableData): Promise<void> {
+    const ok = await confirm({
+      title: `ปิดใช้งานโต๊ะ ${table.name}`,
+      description: "โต๊ะนี้จะถูกซ่อนจากแผนที่โต๊ะ หากมี session เปิดอยู่ระบบจะไม่อนุญาตให้ปิดใช้งาน",
+      confirmLabel: "ปิดใช้งาน",
+      variant: "destructive",
+    });
+    if (ok) {
+      deactivateTableMutation.mutate(table.id);
+    }
+  }
 
   async function showQr(table: TableData): Promise<void> {
     const url = `${window.location.origin}/menu/${table.qr_token}`;
@@ -201,6 +290,38 @@ export default function TableMapPage(): JSX.Element {
                 </span>
               </div>
 
+              <div className="mt-3 flex items-center justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                      aria-label={`จัดการโต๊ะ ${table.name}`}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openEdit(table)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      แก้ไขโต๊ะ
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => void copyQrLink(table)}>
+                      <Copy className="mr-2 h-4 w-4" />
+                      คัดลอกลิงก์ QR
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-red-600 focus:bg-red-50 focus:text-red-700"
+                      onClick={() => void confirmDeactivate(table)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      ปิดใช้งานโต๊ะ
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
               {table.queue_number && (
                 <div className="mt-3 rounded-xl bg-white/90 px-3 py-2 text-center shadow-sm">
                   <span className="text-xs text-slate-500">คิว</span>
@@ -274,6 +395,35 @@ export default function TableMapPage(): JSX.Element {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>แก้ไขโต๊ะ {editingTable?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div><Label>ชื่อโต๊ะ</Label><Input className="mt-1" value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+            <div><Label>จำนวนที่นั่ง</Label><Input type="number" className="mt-1" value={editCapacity} onChange={(e) => setEditCapacity(e.target.value)} min="1" /></div>
+            <div>
+              <Label>สถานะ</Label>
+              <select
+                className="mt-1 h-10 w-full rounded-md border border-gray-300 bg-white px-3 text-sm"
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+              >
+                <option value="available">ว่าง</option>
+                <option value="occupied">มีลูกค้า</option>
+                <option value="bill_requested">เรียกบิล</option>
+                <option value="cleaning">กำลังทำความสะอาด</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>ยกเลิก</Button>
+            <Button className="bg-slate-950 hover:bg-slate-800" disabled={!editName.trim() || updateTableMutation.isPending} onClick={() => updateTableMutation.mutate()}>
+              {updateTableMutation.isPending ? "กำลังบันทึก..." : "บันทึก"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* QR Dialog */}
       <Dialog open={qrOpen} onOpenChange={setQrOpen}>
         <DialogContent className="max-w-sm text-center">
@@ -283,6 +433,7 @@ export default function TableMapPage(): JSX.Element {
           <Button onClick={() => window.print()} variant="outline" className="mt-2">พิมพ์ QR</Button>
         </DialogContent>
       </Dialog>
+      {confirmDialog}
     </div>
   );
 }

@@ -222,6 +222,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] ปรับ Table Map ให้เห็นจำนวนโต๊ะว่าง / มีลูกค้า / เรียกบิล
 - [x] แก้ flow เรียกบิลให้ table status และ active session แสดงใน Table Map ถูกต้อง
 - [x] แก้การเพิ่มโต๊ะให้มี branch context จริงและแสดง error เมื่อสร้างไม่สำเร็จ
+- [x] เพิ่มการแก้ไขโต๊ะ คัดลอกลิงก์ QR และปิดใช้งานโต๊ะจาก Table Map
 
 **Order Lifecycle**
 - [x] ปรับ Session Detail ให้เห็น customer info, source, order number และสถานะรายการชัดขึ้น

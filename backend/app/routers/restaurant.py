@@ -149,8 +149,10 @@ async def update_table(
     current: TokenData = Depends(require_permission("fb.menu.view")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    if not current.branch_id:
+        raise HTTPException(status_code=400, detail="Branch context required")
     table = await db.get(DiningTable, table_id)
-    if not table or table.company_id != current.company_id:
+    if not table or table.company_id != current.company_id or table.branch_id != current.branch_id:
         raise HTTPException(status_code=404, detail="ไม่พบโต๊ะ")
     svc = DiningService(db)
     updated = await svc.update_table(table, **payload.model_dump(exclude_none=True))
@@ -163,8 +165,10 @@ async def delete_table(
     current: TokenData = Depends(require_permission("fb.table.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
+    if not current.branch_id:
+        raise HTTPException(status_code=400, detail="Branch context required")
     table = await db.get(DiningTable, table_id)
-    if not table or table.company_id != current.company_id:
+    if not table or table.company_id != current.company_id or table.branch_id != current.branch_id:
         raise HTTPException(status_code=404, detail="ไม่พบโต๊ะ")
     # ตรวจว่าไม่มี open session
     from sqlalchemy import select as sa_select
