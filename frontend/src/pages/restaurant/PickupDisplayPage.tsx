@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Clock, RefreshCw } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Clock, RefreshCw, Volume2, VolumeX } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { authApi } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { branchApi } from "@/lib/adminApi";
@@ -26,10 +26,16 @@ function readyAgo(readyAt: string | null): string {
   return `พร้อมแล้ว ${diff} นาที`;
 }
 
+function readyMinutes(readyAt: string | null): number {
+  if (!readyAt) return 0;
+  return Math.max(Math.floor((Date.now() - new Date(readyAt).getTime()) / 60_000), 0);
+}
+
 export default function PickupDisplayPage(): JSX.Element {
   const branchId = useAuthStore((s) => s.branchId);
   const prevQueueRef = useRef<number[]>([]);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(false);
 
   const settingsQuery = useQuery({
     queryKey: ["branch-settings", branchId],
@@ -52,15 +58,17 @@ export default function PickupDisplayPage(): JSX.Element {
   const prefix = settingsQuery.data?.fb_queue_prefix ?? "";
   const primaryQueue = readyQueue[0];
   const secondaryQueues = readyQueue.slice(1);
+  const lastUpdatedLabel = useMemo(
+    () => new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+    [queueQuery.dataUpdatedAt]
+  );
 
-  // เล่นเสียงเมื่อมีคิวใหม่
-  useEffect(() => {
-    const prev = prevQueueRef.current;
-    const queueNumbers = readyQueue.map((queue) => queue.queue_number);
-    const newQueues = queueNumbers.filter((q) => !prev.includes(q));
-    if (newQueues.length > 0) {
+  function playPickupChime(force = false): void {
+    if (!force && !soundEnabled) return;
+    try {
       if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
       const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") void ctx.resume();
       [0, 0.3, 0.6].forEach((offset) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -71,9 +79,19 @@ export default function PickupDisplayPage(): JSX.Element {
         osc.start(ctx.currentTime + offset);
         osc.stop(ctx.currentTime + offset + 0.4);
       });
+    } catch {
+      setSoundEnabled(false);
     }
+  }
+
+  // เล่นเสียงเมื่อมีคิวใหม่
+  useEffect(() => {
+    const prev = prevQueueRef.current;
+    const queueNumbers = readyQueue.map((queue) => queue.queue_number);
+    const newQueues = queueNumbers.filter((q) => !prev.includes(q));
+    if (newQueues.length > 0) playPickupChime();
     prevQueueRef.current = queueNumbers;
-  }, [readyQueue]);
+  }, [readyQueue, soundEnabled]);
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-950 px-5 py-6 text-white sm:px-8 sm:py-8">
@@ -87,7 +105,22 @@ export default function PickupDisplayPage(): JSX.Element {
             <RefreshCw className={`h-3.5 w-3.5 ${queueQuery.isFetching ? "animate-spin" : ""}`} />
             อัปเดตทุก 5 วินาที
           </span>
+          <span className="rounded-full bg-slate-900 px-3 py-1.5">ล่าสุด {lastUpdatedLabel}</span>
           <span className="rounded-full bg-slate-900 px-3 py-1.5">คิวพร้อมรับ {readyQueue.length}</span>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              if (next) setTimeout(() => playPickupChime(true), 0);
+            }}
+            className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 font-semibold ${
+              soundEnabled ? "bg-emerald-500 text-emerald-950" : "bg-slate-900 text-slate-400"
+            }`}
+          >
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+            เสียง
+          </button>
         </div>
       </div>
 
@@ -109,7 +142,11 @@ export default function PickupDisplayPage(): JSX.Element {
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center gap-8">
           {primaryQueue ? (
-            <div className="flex w-full max-w-xl flex-col items-center rounded-[2rem] border-4 border-emerald-300 bg-emerald-500 px-8 py-10 shadow-2xl shadow-emerald-950/60 sm:px-14">
+            <div className={`flex w-full max-w-xl flex-col items-center rounded-[2rem] border-4 px-8 py-10 shadow-2xl shadow-emerald-950/60 sm:px-14 ${
+              readyMinutes(primaryQueue.ready_at) >= 10
+                ? "border-amber-200 bg-amber-400"
+                : "border-emerald-300 bg-emerald-500"
+            }`}>
               <span className="text-xl font-bold uppercase tracking-widest text-emerald-950">{prefix || "คิว"}</span>
               <span className="mt-2 text-8xl font-black leading-none text-white sm:text-9xl">
                 {formatQueue(prefix, primaryQueue.queue_number)}
@@ -121,16 +158,24 @@ export default function PickupDisplayPage(): JSX.Element {
                   <Clock className="h-4 w-4" />
                   {readyAgo(primaryQueue.ready_at)}
                 </span>
+                {readyMinutes(primaryQueue.ready_at) >= 10 ? <span className="rounded-full bg-white/50 px-3 py-1">รอนาน</span> : null}
               </div>
             </div>
           ) : null}
           {secondaryQueues.length > 0 ? (
             <div className="flex flex-wrap justify-center gap-4">
               {secondaryQueues.map((queue) => (
-                <div key={queue.session_id} className="rounded-3xl border border-slate-700 bg-slate-900 px-7 py-5 text-center">
-                  <span className="block text-xs font-semibold uppercase tracking-widest text-slate-400">{prefix || "คิว"}</span>
-                  <span className="mt-1 block text-5xl font-black leading-none text-white">{formatQueue(prefix, queue.queue_number)}</span>
-                  <span className="mt-2 block text-xs text-slate-400">{queue.item_count} รายการ · {readyAgo(queue.ready_at)}</span>
+                <div
+                  key={queue.session_id}
+                  className={`rounded-3xl border px-7 py-5 text-center ${
+                    readyMinutes(queue.ready_at) >= 10
+                      ? "border-amber-300 bg-amber-400 text-slate-950"
+                      : "border-slate-700 bg-slate-900 text-white"
+                  }`}
+                >
+                  <span className={`block text-xs font-semibold uppercase tracking-widest ${readyMinutes(queue.ready_at) >= 10 ? "text-slate-700" : "text-slate-400"}`}>{prefix || "คิว"}</span>
+                  <span className="mt-1 block text-5xl font-black leading-none">{formatQueue(prefix, queue.queue_number)}</span>
+                  <span className="mt-2 block text-xs opacity-75">{queue.item_count} รายการ · {readyAgo(queue.ready_at)}</span>
                 </div>
               ))}
             </div>

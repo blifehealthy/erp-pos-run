@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: Quick Service payment dialog from staff Orders
+- Recent completed feature: Pickup Display operational polish
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -41,7 +41,7 @@ Last updated: 2026-06-02
   - cart and item option sheets respect safe-area bottom padding
   - dine-in and quick-service pages show a loading panel while status is fetched
 - Playwright screenshot validation was attempted, but `npx playwright` tried to resolve unavailable `playwright@1.60.0`; use manual mobile UAT or fix Playwright package pin before screenshot automation.
-- Pickup Display now shows only ready Quick Service queues and includes item count, ready time, loading/refresh indicator, and error state.
+- Pickup Display now shows only ready Quick Service queues and includes item count, ready time, loading/refresh indicator, error state, last-updated time, sound toggle, and long-wait highlighting.
 - Staff restaurant pages were improved:
   - Table Map summary and bill-requested visibility
   - Table Map QR-new/kitchen/ready counts
@@ -97,6 +97,11 @@ Last updated: 2026-06-02
   - `/restaurant/orders` now shows kitchen status counts for each session.
   - Ready Quick Service queues show `พร้อมรับ` and can be closed with `รับเงิน` directly from the Orders list.
   - Staff can choose cash, PromptPay, transfer, card, or other payment and enter a payment reference.
+- Pickup Display operational polish was added:
+  - Staff can enable/disable chime sound from the display.
+  - New ready queues play a chime after sound is enabled.
+  - Queues waiting 10+ minutes are highlighted so staff can prioritize handoff.
+  - The display shows the last successful refresh time.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -142,8 +147,16 @@ Start here next session.
 - Manually inspect mobile dine-in and quick-service pages on 320px/390px widths.
 - Manually inspect Table Map badges, Kitchen Display filters, Pickup Display readability, Session Detail served/cancel controls, and checkout receipt copy.
 - Manually inspect Quick Service `รับเงิน` from `/restaurant/orders` after a queue reaches ready state, including transfer/card reference.
+- Manually inspect Pickup Display sound toggle, long-wait highlight, and refresh timestamp on the actual pickup display device.
 - Manually inspect `/restaurant/recipes` create/edit/delete and `/restaurant/reports/ingredients` CSV export.
 - Note UI friction before moving to recipe/cost work.
+
+### 2. Next Build Items
+
+- Add receipt print polish for restaurant checkout, especially thermal print layout and payment reference visibility.
+- Add manager/cashier/kitchen permission separation for restaurant actions.
+- Add recipe-cost readiness helpers: seed raw materials and sample recipes, plus easier raw material creation from recipe setup.
+- Add a short operations guide for staff: open shop, print QR, take orders, kitchen flow, pickup, checkout, and end-of-day checks.
 
 Reference checklist:
 

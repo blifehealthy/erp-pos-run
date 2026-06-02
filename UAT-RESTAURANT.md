@@ -130,6 +130,8 @@ Latest automated smoke result: PASS on 2026-06-02.
 | 08.4 | Item marked served | Queue disappears from ready list | | |
 | 08.5 | Ready queue has multiple items | Display shows item count and ready time | | |
 | 08.6 | Network/API error occurs | Display shows an error state instead of a blank screen | | |
+| 08.7 | Staff enables sound on pickup display | New ready queue plays a chime, and sound can be toggled off | | |
+| 08.8 | Ready queue waits more than 10 minutes | Queue is visually highlighted as long-waiting | | |
 
 ## TC-FB-09 Recipe And Ingredient Cost
 
