@@ -225,6 +225,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] เพิ่มการแก้ไขโต๊ะ คัดลอกลิงก์ QR และปิดใช้งานโต๊ะจาก Table Map
 - [x] เพิ่ม dialog เปิดโต๊ะพร้อมจำนวนลูกค้า ชื่อลูกค้า และเบอร์โทร
 - [x] กันการเปลี่ยนโต๊ะเป็นว่างเมื่อยังมี session เปิดอยู่
+- [x] ปรับ QR preview ให้มีลิงก์ คัดลอกลิงก์ และ print เฉพาะการ์ด QR
 
 **Order Lifecycle**
 - [x] ปรับ Session Detail ให้เห็น customer info, source, order number และสถานะรายการชัดขึ้น

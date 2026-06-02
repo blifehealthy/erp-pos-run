@@ -47,6 +47,10 @@ function getErrorMessage(error: unknown): string {
   return axiosError.response?.data?.detail ?? axiosError.response?.data?.error ?? (error instanceof Error ? error.message : "ไม่สามารถทำรายการได้");
 }
 
+function getQrUrl(table: TableData): string {
+  return `${window.location.origin}/menu/${table.qr_token}`;
+}
+
 export default function TableMapPage(): JSX.Element {
   const { toast } = useToast();
   const [confirm, confirmDialog] = useConfirm();
@@ -225,8 +229,7 @@ export default function TableMapPage(): JSX.Element {
   }
 
   async function copyQrLink(table: TableData): Promise<void> {
-    const url = `${window.location.origin}/menu/${table.qr_token}`;
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(getQrUrl(table));
     toast({ title: "คัดลอกลิงก์ QR แล้ว", description: table.name });
   }
 
@@ -243,8 +246,7 @@ export default function TableMapPage(): JSX.Element {
   }
 
   async function showQr(table: TableData): Promise<void> {
-    const url = `${window.location.origin}/menu/${table.qr_token}`;
-    const dataUrl = await QRCode.toDataURL(url, { width: 280, margin: 2 });
+    const dataUrl = await QRCode.toDataURL(getQrUrl(table), { width: 320, margin: 2 });
     setQrDataUrl(dataUrl);
     setQrTable(table);
     setQrOpen(true);
@@ -486,11 +488,27 @@ export default function TableMapPage(): JSX.Element {
 
       {/* QR Dialog */}
       <Dialog open={qrOpen} onOpenChange={setQrOpen}>
-        <DialogContent className="max-w-sm text-center">
+        <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>QR โต๊ะ {qrTable?.name}</DialogTitle></DialogHeader>
-          {qrDataUrl && <img src={qrDataUrl} alt="QR" className="mx-auto rounded-2xl" />}
-          <p className="text-xs text-slate-500 mt-2">ลูกค้าสแกนเพื่อดูเมนูและสั่งอาหาร</p>
-          <Button onClick={() => window.print()} variant="outline" className="mt-2">พิมพ์ QR</Button>
+          <div className="qr-print-card rounded-2xl border border-slate-200 bg-white p-5 text-center">
+            <div className="text-xs font-semibold uppercase text-slate-500">สแกนเพื่อสั่งอาหาร</div>
+            <div className="mt-1 text-2xl font-bold text-slate-950">โต๊ะ {qrTable?.name}</div>
+            {qrDataUrl && <img src={qrDataUrl} alt={`QR โต๊ะ ${qrTable?.name ?? ""}`} className="mx-auto mt-4 h-72 w-72 rounded-2xl" />}
+            {qrTable && (
+              <div className="mt-3 break-all rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                {getQrUrl(qrTable)}
+              </div>
+            )}
+          </div>
+          <div className="qr-dialog-actions mt-4 grid grid-cols-2 gap-2">
+            <Button disabled={!qrTable} onClick={() => qrTable && void copyQrLink(qrTable)} variant="outline">
+              <Copy className="mr-2 h-4 w-4" />
+              คัดลอกลิงก์
+            </Button>
+            <Button onClick={() => window.print()} className="bg-slate-950 hover:bg-slate-800">
+              พิมพ์ QR
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
       {confirmDialog}

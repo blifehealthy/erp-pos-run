@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent feature commit: `4401897 improve restaurant open table flow`
+- Recent completed feature: QR preview/print improvements
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -43,6 +43,10 @@ Last updated: 2026-06-02
 - Table status guard was added:
   - UI disables `available` status while a table has an active session.
   - Backend rejects setting a table to `available` if it still has an open/bill-requested session.
+- QR preview/print was improved:
+  - QR dialog shows the customer-facing URL.
+  - QR dialog has a copy link button.
+  - Print mode prints only the QR table card.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -76,26 +80,7 @@ Result: health returned `{"status":"ok","version":"1.0.0"}`.
 
 Start here next session.
 
-### 1. Add Better QR Print/Preview
-
-Current behavior:
-
-- QR dialog displays QR and uses `window.print()`.
-
-Needed:
-
-- Add visible QR URL text.
-- Add copy button in QR dialog.
-- Improve print view so it prints only the QR/table card, not the whole app.
-
-Files likely involved:
-
-- `frontend/src/pages/restaurant/TableMapPage.tsx`
-- Possibly global print CSS in `frontend/src/index.css`
-
-### 2. Continue F&B Order Lifecycle
-
-After QR print/preview:
+### 1. Continue F&B Order Lifecycle
 
 - Add cancel order/item flow with required reason.
 - Add F&B receipt details showing table/queue/source.
@@ -104,6 +89,13 @@ After QR print/preview:
 Reference checklist:
 
 - `RESTAURANT-MODULE-PLAN.md`
+
+Files likely involved:
+
+- `backend/app/routers/restaurant.py`
+- `backend/app/services/dining_service.py`
+- `frontend/src/pages/restaurant/SessionDetailPage.tsx`
+- `frontend/src/pages/restaurant/KitchenDisplayPage.tsx`
 
 ## Commands To Resume
 

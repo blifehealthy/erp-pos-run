@@ -22,3 +22,33 @@ body {
 #root {
   min-height: 100vh;
 }
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .qr-print-card,
+  .qr-print-card * {
+    visibility: visible;
+  }
+
+  .qr-print-card {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: 480px;
+    height: fit-content;
+    margin: 0 auto;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .qr-dialog-actions {
+    display: none !important;
+  }
+}
