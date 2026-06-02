@@ -229,6 +229,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] ปรับ Kitchen Display ให้กรองทุกช่องทาง / โต๊ะ / รับเอง และแสดง source badge ต่อ ticket
 - [x] ปรับ Kitchen Display ให้ปุ่มสถานะใหญ่ขึ้น แสดงหมายเหตุเด่น และมี manual refresh/error state
 - [x] ปรับ Pickup Display ให้คิวแรกเด่นและคิวอื่นอ่านง่าย
+- [x] ปรับ Pickup Display ให้แสดงเฉพาะ Quick Service พร้อม item count, ready time, loading/error state
 - [x] ปรับ Table Map ให้เห็นจำนวนโต๊ะว่าง / มีลูกค้า / เรียกบิล
 - [x] แก้ flow เรียกบิลให้ table status และ active session แสดงใน Table Map ถูกต้อง
 - [x] แก้การเพิ่มโต๊ะให้มี branch context จริงและแสดง error เมื่อสร้างไม่สำเร็จ

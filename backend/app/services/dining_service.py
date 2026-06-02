@@ -432,8 +432,8 @@ class DiningService:
         except Exception:
             pass  # notification ไม่ควร block การทำงานหลัก
 
-    async def get_ready_queue_numbers(self, branch_id: uuid.UUID) -> list[int]:
-        """คิวเลขที่อาหารพร้อมทุกรายการแล้ว (สำหรับหน้าจอ Pickup Display)"""
+    async def get_ready_pickup_queues(self, branch_id: uuid.UUID) -> list[dict[str, object]]:
+        """คิว Quick Service ที่อาหารพร้อมทุกรายการแล้ว (สำหรับหน้าจอ Pickup Display)"""
         done_sessions = await self.db.scalars(
             select(KitchenTicket.session_id)
             .where(KitchenTicket.branch_id == branch_id, KitchenTicket.status == "done")
@@ -454,11 +454,38 @@ class DiningService:
         if not fully_done:
             return []
 
-        rows = await self.db.scalars(
-            select(DiningSession.queue_number)
-            .where(DiningSession.id.in_(fully_done), DiningSession.queue_number.isnot(None), DiningSession.status == "open")
-        )
-        return sorted(set(r for r in rows.all() if r is not None))
+        sessions = list((await self.db.scalars(
+            select(DiningSession)
+            .where(
+                DiningSession.id.in_(fully_done),
+                DiningSession.queue_number.isnot(None),
+                DiningSession.table_id.is_(None),
+                DiningSession.status == "open",
+            )
+            .order_by(DiningSession.queue_number)
+        )).all())
+
+        result: list[dict[str, object]] = []
+        for session in sessions:
+            stats = await self.db.execute(
+                select(func.count(KitchenTicket.id), func.coalesce(func.sum(KitchenTicket.qty), 0), func.max(KitchenTicket.done_at))
+                .where(KitchenTicket.session_id == session.id, KitchenTicket.status == "done")
+            )
+            ticket_count, item_count, ready_at = stats.one()
+            result.append({
+                "session_id": str(session.id),
+                "queue_number": session.queue_number,
+                "customer_name": session.customer_name,
+                "ticket_count": int(ticket_count or 0),
+                "item_count": int(item_count or 0),
+                "ready_at": ready_at.isoformat() if ready_at else None,
+            })
+        return result
+
+    async def get_ready_queue_numbers(self, branch_id: uuid.UUID) -> list[int]:
+        """Backward-compatible list of ready Quick Service queue numbers."""
+        queues = await self.get_ready_pickup_queues(branch_id)
+        return [int(item["queue_number"]) for item in queues if item.get("queue_number") is not None]
 
     # ── Public Menu (QR) ──────────────────────────────────────────────────────
 

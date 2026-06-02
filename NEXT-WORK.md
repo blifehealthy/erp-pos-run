@@ -41,11 +41,12 @@ Last updated: 2026-06-02
   - cart and item option sheets respect safe-area bottom padding
   - dine-in and quick-service pages show a loading panel while status is fetched
 - Playwright screenshot validation was attempted, but `npx playwright` tried to resolve unavailable `playwright@1.60.0`; use manual mobile UAT or fix Playwright package pin before screenshot automation.
+- Pickup Display now shows only ready Quick Service queues and includes item count, ready time, loading/refresh indicator, and error state.
 - Staff restaurant pages were improved:
   - Table Map summary and bill-requested visibility
   - Table Map QR-new/kitchen/ready counts
   - Kitchen Display urgent/old-first sorting and source filtering
-  - Pickup Display queue visibility
+  - Pickup Display queue visibility and ready Quick Service details
   - Orders filters by source/status/date
   - Session Detail with customer/source/order context and status board
   - Checkout invalidation and payment reference support

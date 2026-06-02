@@ -533,8 +533,8 @@ async def get_pickup_queue(
     if not current.branch_id:
         raise HTTPException(status_code=400, detail="Branch context required")
     svc = DiningService(db)
-    queue_numbers = await svc.get_ready_queue_numbers(current.branch_id)
-    return ok(queue_numbers)
+    queues = await svc.get_ready_pickup_queues(current.branch_id)
+    return ok(queues)
 
 
 # ── Ingredient Usage Report ───────────────────────────────────────────────────

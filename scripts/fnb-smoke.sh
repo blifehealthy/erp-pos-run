@@ -98,4 +98,11 @@ if [[ "$ITEM_STATUS" != "done" ]]; then
   exit 1
 fi
 
+echo "== F&B smoke: pickup queue"
+PICKUP_SESSION_ID="$(psql_at "select s.id from dining_sessions s where s.id='$SESSION_ID' and s.table_id is null and s.status='open' and exists (select 1 from kitchen_tickets kt where kt.session_id=s.id and kt.status='done') and not exists (select 1 from kitchen_tickets kt where kt.session_id=s.id and kt.status in ('pending','cooking')) limit 1;")"
+if [[ "$PICKUP_SESSION_ID" != "$SESSION_ID" ]]; then
+  echo "Expected pickup queue to include session $SESSION_ID" >&2
+  exit 1
+fi
+
 echo "PASS: F&B smoke OK session=$SESSION_ID queue=$QUEUE_DISPLAY ticket=$TICKET_ID"

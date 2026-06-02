@@ -116,8 +116,10 @@ bash scripts/fnb-smoke.sh
 |---|---|---|---|---|
 | 08.1 | Open `/restaurant/pickup` | Pickup display loads | | |
 | 08.2 | Quick-service item marked done | Queue appears as ready | | |
-| 08.3 | Multiple ready queues exist | First queue is most prominent | | |
+| 08.3 | Multiple ready queues exist | First queue is most prominent and other queues remain visible | | |
 | 08.4 | Item marked served | Queue disappears from ready list | | |
+| 08.5 | Ready queue has multiple items | Display shows item count and ready time | | |
+| 08.6 | Network/API error occurs | Display shows an error state instead of a blank screen | | |
 
 ## Notes
 
