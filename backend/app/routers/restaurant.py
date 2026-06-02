@@ -389,6 +389,32 @@ async def cancel_order_item(
     return ok({"id": str(updated.id), "status": updated.status})
 
 
+@router.patch("/order-items/{item_id}/status")
+async def update_order_item_status(
+    item_id: uuid.UUID,
+    payload: TicketStatusUpdate,
+    current: TokenData = Depends(require_permission("fb.menu.view")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    item = await db.get(DiningOrderItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="ไม่พบรายการ")
+    order = await db.get(DiningOrder, item.order_id)
+    if not order or order.company_id != current.company_id:
+        raise HTTPException(status_code=404, detail="ไม่พบออเดอร์")
+    session = await db.get(DiningSession, order.session_id)
+    if not session or session.status == "closed":
+        raise HTTPException(status_code=400, detail="Session ปิดแล้ว")
+    if payload.status not in ["pending", "cooking", "done", "served"]:
+        raise HTTPException(status_code=400, detail="status ไม่ถูกต้อง")
+    svc = DiningService(db)
+    try:
+        updated = await svc.update_order_item_status(item, payload.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ok({"id": str(updated.id), "status": updated.status})
+
+
 @router.post("/sessions/{session_id}/bill")
 async def request_bill(
     session_id: uuid.UUID,
@@ -482,7 +508,10 @@ async def update_ticket(
     if payload.status not in valid:
         raise HTTPException(status_code=400, detail=f"status ต้องเป็น {valid}")
     svc = DiningService(db)
-    updated = await svc.update_ticket_status(ticket, payload.status)
+    try:
+        updated = await svc.update_ticket_status(ticket, payload.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ok({"id": str(updated.id), "status": updated.status})
 
 

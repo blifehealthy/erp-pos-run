@@ -123,6 +123,23 @@ export default function SessionDetailPage(): JSX.Element {
     },
   });
 
+  const itemStatusMutation = useMutation({
+    mutationFn: async ({ itemId, status }: { itemId: string; status: string }) => {
+      await authApi.patch(`/restaurant/order-items/${itemId}/status`, { status });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["session-detail"] }),
+        queryClient.invalidateQueries({ queryKey: ["kitchen-tickets"] }),
+        queryClient.invalidateQueries({ queryKey: ["pickup-queue"] }),
+      ]);
+      toast({ title: "อัปเดตสถานะแล้ว" });
+    },
+    onError: (error) => {
+      toast({ title: "อัปเดตสถานะไม่สำเร็จ", description: getErrorMessage(error), variant: "destructive" });
+    },
+  });
+
   const session = sessionQuery.data;
   if (!session && !sessionQuery.isLoading) {
     return <div className="p-8 text-center text-slate-400">ไม่พบ session</div>;
@@ -247,6 +264,15 @@ export default function SessionDetailPage(): JSX.Element {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
+                      {session.status !== "closed" && item.status === "done" && order.status !== "cancelled" ? (
+                        <button
+                          type="button"
+                          onClick={() => itemStatusMutation.mutate({ itemId: item.id, status: "served" })}
+                          className="mr-2 rounded-lg border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+                        >
+                          เสิร์ฟแล้ว
+                        </button>
+                      ) : null}
                       {session.status !== "closed" && item.status !== "served" && item.status !== "cancelled" && order.status !== "cancelled" ? (
                         <button
                           type="button"

@@ -30,6 +30,19 @@ class DiningService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
+    def _validate_ticket_transition(self, current_status: str, new_status: str) -> None:
+        allowed: dict[str, set[str]] = {
+            "pending": {"cooking", "cancelled"},
+            "cooking": {"done", "cancelled"},
+            "done": {"served"},
+            "served": set(),
+            "cancelled": set(),
+        }
+        if new_status == current_status:
+            return
+        if new_status not in allowed.get(current_status, set()):
+            raise ValueError(f"ไม่สามารถเปลี่ยนสถานะจาก {current_status} เป็น {new_status} ได้")
+
     # ── Tables ────────────────────────────────────────────────────────────────
 
     async def list_tables(self, company_id: uuid.UUID, branch_id: uuid.UUID) -> list[TableRead]:
@@ -260,6 +273,7 @@ class DiningService:
         return list((await self.db.scalars(q)).all())
 
     async def update_ticket_status(self, ticket: KitchenTicket, new_status: str) -> KitchenTicket:
+        self._validate_ticket_transition(ticket.status, new_status)
         ticket.status = new_status
         if new_status == "done":
             ticket.done_at = datetime.now(timezone.utc)
@@ -277,6 +291,21 @@ class DiningService:
             await self._notify_pickup_if_ready(ticket)
 
         return ticket
+
+    async def update_order_item_status(self, item: DiningOrderItem, new_status: str) -> DiningOrderItem:
+        ticket = await self.db.scalar(
+            select(KitchenTicket).where(KitchenTicket.order_item_id == item.id)
+        )
+        if ticket:
+            await self.update_ticket_status(ticket, new_status)
+            await self.db.refresh(item)
+            return item
+
+        self._validate_ticket_transition(item.status, new_status)
+        item.status = new_status
+        await self.db.commit()
+        await self.db.refresh(item)
+        return item
 
     async def cancel_order_item(self, item: DiningOrderItem, reason: str) -> DiningOrderItem:
         if item.status == "served":

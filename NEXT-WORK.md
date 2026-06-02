@@ -56,6 +56,10 @@ Last updated: 2026-06-02
   - Receipt result includes table name, queue number, source type, customer info, payment method, and note.
   - Checkout success screen shows F&B context and ordered item lines.
   - SaleOrder note includes F&B source context.
+- Kitchen status and served workflow was tightened:
+  - Backend validates status order: pending -> cooking -> done -> served.
+  - Session Detail can mark done items as served.
+  - Kitchen Display still advances tickets through the same guarded flow.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -89,9 +93,11 @@ Result: health returned `{"status":"ok","version":"1.0.0"}`.
 
 Start here next session.
 
-### 1. Continue F&B Order Lifecycle
+### 1. Test F&B End-to-End Flow
 
-- Review kitchen status transitions and served workflow.
+- Run a manual dine-in flow: create/open table -> customer/staff order -> kitchen transitions -> served -> checkout -> receipt.
+- Run a manual quick-service flow: QR order -> kitchen transitions -> pickup display -> checkout/order history.
+- Note any UI friction or missing staff actions before moving to broader POS polish.
 
 Reference checklist:
 
@@ -99,10 +105,10 @@ Reference checklist:
 
 Files likely involved:
 
-- `backend/app/routers/restaurant.py`
-- `backend/app/services/dining_service.py`
-- `frontend/src/pages/restaurant/SessionCheckoutPage.tsx`
+- `frontend/src/pages/restaurant/TableMapPage.tsx`
+- `frontend/src/pages/restaurant/SessionDetailPage.tsx`
 - `frontend/src/pages/restaurant/KitchenDisplayPage.tsx`
+- `frontend/src/pages/restaurant/PickupDisplayPage.tsx`
 
 ## Commands To Resume
 
