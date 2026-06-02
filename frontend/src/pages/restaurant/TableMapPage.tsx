@@ -57,10 +57,15 @@ export default function TableMapPage(): JSX.Element {
   const [qrOpen, setQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrTable, setQrTable] = useState<TableData | null>(null);
+  const [openTableDialogOpen, setOpenTableDialogOpen] = useState(false);
+  const [openingTable, setOpeningTable] = useState<TableData | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<TableData | null>(null);
   const [newName, setNewName] = useState("");
   const [newCapacity, setNewCapacity] = useState("4");
+  const [guestCount, setGuestCount] = useState("1");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [editName, setEditName] = useState("");
   const [editCapacity, setEditCapacity] = useState("4");
   const [editStatus, setEditStatus] = useState("available");
@@ -102,11 +107,29 @@ export default function TableMapPage(): JSX.Element {
   });
 
   const openSessionMutation = useMutation({
-    mutationFn: async (tableId: string) =>
-      authApi.post("/restaurant/sessions", { table_id: tableId, guest_count: 1 }),
+    mutationFn: async () => {
+      const count = Number(guestCount);
+      if (!openingTable) {
+        throw new Error("ไม่พบโต๊ะที่ต้องการเปิด");
+      }
+      if (!Number.isFinite(count) || count < 1) {
+        throw new Error("จำนวนลูกค้าต้องมากกว่า 0");
+      }
+      return authApi.post("/restaurant/sessions", {
+        table_id: openingTable.id,
+        guest_count: count,
+        customer_name: customerName.trim() || undefined,
+        customer_phone: customerPhone.trim() || undefined,
+      });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["dining-tables"] });
       toast({ title: "เปิดโต๊ะแล้ว" });
+      setOpenTableDialogOpen(false);
+      setOpeningTable(null);
+      setGuestCount("1");
+      setCustomerName("");
+      setCustomerPhone("");
     },
     onError: (error) => {
       toast({
@@ -145,6 +168,9 @@ export default function TableMapPage(): JSX.Element {
       }
       if (!Number.isFinite(capacity) || capacity < 1) {
         throw new Error("จำนวนที่นั่งต้องมากกว่า 0");
+      }
+      if (editingTable.active_session_id && editStatus === "available") {
+        throw new Error("โต๊ะที่มี session เปิดอยู่ไม่สามารถเปลี่ยนเป็นว่างได้");
       }
       return authApi.patch(`/restaurant/tables/${editingTable.id}`, {
         name,
@@ -188,6 +214,14 @@ export default function TableMapPage(): JSX.Element {
     setEditCapacity(String(table.capacity));
     setEditStatus(table.status);
     setEditOpen(true);
+  }
+
+  function openTable(table: TableData): void {
+    setOpeningTable(table);
+    setGuestCount("1");
+    setCustomerName("");
+    setCustomerPhone("");
+    setOpenTableDialogOpen(true);
   }
 
   async function copyQrLink(table: TableData): Promise<void> {
@@ -341,7 +375,7 @@ export default function TableMapPage(): JSX.Element {
                 {table.status === "available" ? (
                   <button
                     type="button"
-                    onClick={() => openSessionMutation.mutate(table.id)}
+                    onClick={() => openTable(table)}
                     className="flex-1 rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
                   >
                     เปิดโต๊ะ
@@ -395,6 +429,32 @@ export default function TableMapPage(): JSX.Element {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={openTableDialogOpen} onOpenChange={setOpenTableDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>เปิดโต๊ะ {openingTable?.name}</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>จำนวนลูกค้า</Label>
+              <Input type="number" className="mt-1" value={guestCount} onChange={(e) => setGuestCount(e.target.value)} min="1" />
+            </div>
+            <div>
+              <Label>ชื่อลูกค้า (ถ้ามี)</Label>
+              <Input className="mt-1" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="เช่น คุณสมชาย" />
+            </div>
+            <div>
+              <Label>เบอร์โทร (ถ้ามี)</Label>
+              <Input className="mt-1" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="ใช้ติดตามหรือค้นหาออเดอร์" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenTableDialogOpen(false)}>ยกเลิก</Button>
+            <Button className="bg-slate-950 hover:bg-slate-800" disabled={!openingTable || Number(guestCount) < 1 || openSessionMutation.isPending} onClick={() => openSessionMutation.mutate()}>
+              {openSessionMutation.isPending ? "กำลังเปิดโต๊ะ..." : "เปิดโต๊ะ"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>แก้ไขโต๊ะ {editingTable?.name}</DialogTitle></DialogHeader>
@@ -408,7 +468,7 @@ export default function TableMapPage(): JSX.Element {
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value)}
               >
-                <option value="available">ว่าง</option>
+                <option value="available" disabled={Boolean(editingTable?.active_session_id)}>ว่าง</option>
                 <option value="occupied">มีลูกค้า</option>
                 <option value="bill_requested">เรียกบิล</option>
                 <option value="cleaning">กำลังทำความสะอาด</option>

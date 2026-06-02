@@ -154,6 +154,15 @@ async def update_table(
     table = await db.get(DiningTable, table_id)
     if not table or table.company_id != current.company_id or table.branch_id != current.branch_id:
         raise HTTPException(status_code=404, detail="ไม่พบโต๊ะ")
+    if payload.status == "available":
+        active = await db.scalar(
+            select(DiningSession.id).where(
+                DiningSession.table_id == table_id,
+                DiningSession.status.in_(["open", "bill_requested"]),
+            ).limit(1)
+        )
+        if active:
+            raise HTTPException(status_code=400, detail="โต๊ะนี้มี session ที่ยังเปิดอยู่")
     svc = DiningService(db)
     updated = await svc.update_table(table, **payload.model_dump(exclude_none=True))
     return ok({"id": str(updated.id), "status": updated.status, "name": updated.name})
