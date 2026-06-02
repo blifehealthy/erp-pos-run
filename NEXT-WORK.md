@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: Customer mobile ordering polish and refresh-safe status/cart
+- Recent completed feature: Kitchen Display source filtering and customer-to-kitchen E2E validation
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -21,9 +21,15 @@ Last updated: 2026-06-02
 - Quick service QR page has menu search, customer phone, order submission, and queue status.
 - Customer mobile ordering now persists carts per QR token, restores order/queue status after refresh, shows readable backend errors, and avoids repeating completion sounds on every polling refresh.
 - Public order status endpoints now validate that the requested session belongs to the scanned table QR or quick-service branch token.
+- Customer-to-kitchen E2E was validated with a Quick Service public order:
+  - session `f01d0351-2b46-4d61-87e7-114722633f93`
+  - queue `005`
+  - product `ปอเปี๊ยะทอด`
+  - kitchen ticket status `pending`
+- Kitchen Display now supports source filtering for all/table/quick-service tickets, shows source badges, has a manual refresh button, larger status buttons, stronger special-request treatment, and visible error state.
 - Staff restaurant pages were improved:
   - Table Map summary and bill-requested visibility
-  - Kitchen Display urgent/old-first sorting
+  - Kitchen Display urgent/old-first sorting and source filtering
   - Pickup Display queue visibility
   - Orders filters by source/status/date
   - Session Detail with customer/source/order context

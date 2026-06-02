@@ -224,6 +224,8 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 
 **Staff Displays**
 - [x] ปรับ Kitchen Display ให้เรียงรายการเก่าก่อนและแสดงงานเกิน 10 นาที
+- [x] ปรับ Kitchen Display ให้กรองทุกช่องทาง / โต๊ะ / รับเอง และแสดง source badge ต่อ ticket
+- [x] ปรับ Kitchen Display ให้ปุ่มสถานะใหญ่ขึ้น แสดงหมายเหตุเด่น และมี manual refresh/error state
 - [x] ปรับ Pickup Display ให้คิวแรกเด่นและคิวอื่นอ่านง่าย
 - [x] ปรับ Table Map ให้เห็นจำนวนโต๊ะว่าง / มีลูกค้า / เรียกบิล
 - [x] แก้ flow เรียกบิลให้ table status และ active session แสดงใน Table Map ถูกต้อง
@@ -245,7 +247,8 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 ### 3. `/restaurant/kitchen` — Kitchen Display
 - แสดง ticket แบบ Kanban: pending | cooking | done
 - ลาก / กดเปลี่ยนสถานะ
-- Auto-refresh ทุก 10 วินาที (polling) หรือ WebSocket
+- Auto-refresh ทุก 5 วินาที พร้อม manual refresh
+- กรองตามช่องทาง โต๊ะ / Quick Service และสถานีครัว
 
 ### 4. `/restaurant/recipes` — Recipe Management
 - สร้าง/แก้ไขสูตรต่อเมนู

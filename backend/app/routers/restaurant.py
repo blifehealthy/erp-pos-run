@@ -488,6 +488,7 @@ async def list_kitchen_tickets(
         "station": t.station,
         "queue_number": t.queue_number,
         "table_name": t.table_name,
+        "source_type": "dine_in" if t.table_name else "quick_service",
         "status": t.status,
         "created_at": t.created_at.isoformat() if t.created_at else None,
         "done_at": t.done_at.isoformat() if t.done_at else None,
