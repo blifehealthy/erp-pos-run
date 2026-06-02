@@ -1,0 +1,22 @@
+services:
+  backend:
+    restart: always
+    volumes: []
+    environment:
+      ENVIRONMENT: production
+      ALLOWED_HOSTS: blifehealthy.com,erp.blifehealthy.com
+
+  frontend:
+    restart: always
+    volumes: []
+
+  nginx:
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certbot_data:/etc/letsencrypt
+
+volumes:
+  certbot_data:
