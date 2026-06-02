@@ -89,6 +89,15 @@ class RecipeListItem(BaseSchema):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ── Raw Material ──────────────────────────────────────────────────────────────
+
+class RawMaterialCreate(BaseSchema):
+    sku: str
+    name: str
+    cost_price: Decimal = Decimal("0")
+    unit: str = "g"
+
+
 # ── Dining Table ─────────────────────────────────────────────────────────────
 
 class TableCreate(BaseSchema):

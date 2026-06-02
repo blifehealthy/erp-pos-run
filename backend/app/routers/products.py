@@ -155,6 +155,7 @@ async def list_products(
     limit: int = Query(default=20, ge=1, le=100),
     search: str | None = Query(default=None),
     category_id: uuid.UUID | None = Query(default=None),
+    product_type: str | None = Query(default=None),
     is_active: bool | None = Query(default=None),
     current: TokenData = Depends(require_permission("inventory.product.view")),
     db: AsyncSession = Depends(get_db),
@@ -166,6 +167,7 @@ async def list_products(
         limit=limit,
         search=search,
         category_id=category_id,
+        product_type=product_type,
         is_active=is_active,
     )
     data = [ProductListItem.model_validate(product).model_dump() for product in products]

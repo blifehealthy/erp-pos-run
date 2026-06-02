@@ -22,8 +22,9 @@ Latest automated smoke result: PASS on 2026-06-02.
 - Quick Service: public menu -> public order -> public status -> kitchen pending/cooking/done -> authenticated pickup queue.
 - Dine-in: staff create table -> public table QR order -> kitchen pending/cooking/done -> staff mark served -> public bill request -> authenticated checkout/receipt.
 - Latest run IDs:
-  - quick-service session `43cf4255-46d6-429c-9d46-e157a38e09bb`, queue `016`, ticket `5f13854c-947d-4d65-9cb3-bca2a68871e4`
-  - dine-in session `2d283a5c-7b5b-4eb4-89fa-f78d79cffd10`, ticket `64cc4735-5a7c-4d8a-a002-d71c92fc780b`, checkout total `178.00`
+  - quick-service session `4d48945e-029f-45ae-bbdd-94d4906c31d0`, queue `026`, ticket `58e1e0d4-9466-49fc-bfce-35591c269e8a`
+  - dine-in session `78ed30af-fed5-4d77-b973-c24efbc1f782`, ticket `7522f219-c760-45a1-ba65-7061ca11e298`, checkout total `178.00`
+  - raw material API smoke SKU `RAW-SMOKE-1780414881`
 
 ## Test Result Legend
 
@@ -143,7 +144,20 @@ Latest automated smoke result: PASS on 2026-06-02.
 | 09.3 | Select a recipe | Ingredients, cost per yield, selling price, and gross margin show | | |
 | 09.4 | Click edit on an existing recipe | Form opens with existing yield, notes, and ingredient rows prefilled | | |
 | 09.5 | Change ingredient quantity/unit and save | Recipe updates and recalculates cost/margin | | |
-| 09.6 | Open `/restaurant/reports/ingredients` | Theoretical ingredient usage can be filtered and exported as CSV | | |
+| 09.6 | Create a missing raw material from the recipe form | Raw material is created with `raw_material` type and appended to ingredient rows | | |
+| 09.7 | Run demo seed | Demo raw materials and sample recipes are available for cost testing | | |
+| 09.8 | Open `/restaurant/reports/ingredients` | Theoretical ingredient usage can be filtered and exported as CSV | | |
+
+## TC-FB-10 Restaurant Permissions
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 10.1 | Login as cashier/service staff | Staff can open tables, place orders, request bill, checkout, and cancel with reason | | |
+| 10.2 | Cashier opens kitchen page without kitchen permission | Access is blocked by permission guard/API | | |
+| 10.3 | Login as kitchen staff | Staff can view kitchen tickets and move pending -> cooking -> done | | |
+| 10.4 | Kitchen staff tries to create/edit recipe | Access is blocked by permission guard/API | | |
+| 10.5 | Login as manager/recipe staff | Staff can create raw materials and recipes, and view ingredient reports | | |
+| 10.6 | Staff without settings permission generates Quick Service QR | Access is blocked by permission guard/API | | |
 
 ## Notes
 

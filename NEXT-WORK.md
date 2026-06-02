@@ -6,7 +6,7 @@ Last updated: 2026-06-02
 
 - Repo: `https://github.com/blifehealthy/erp-pos-run.git`
 - Branch: `main`
-- Recent completed feature: Restaurant receipt print polish
+- Recent completed feature: Restaurant permission and recipe-cost readiness
 - App URL: `http://localhost`
 - Restaurant table page: `http://localhost/restaurant/tables`
 - Health check: `http://localhost/health`
@@ -107,6 +107,16 @@ Last updated: 2026-06-02
   - Queues waiting 10+ minutes are highlighted so staff can prioritize handoff.
   - The display shows the last successful refresh time.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
+- Restaurant permission separation was tightened:
+  - table/session setup uses `fb.table.manage`
+  - ordering, bill, checkout, and cancel flow use `fb.order.create`
+  - kitchen ticket/status flow uses `fb.kitchen.manage`
+  - recipe create/edit/delete and raw material creation use `fb.recipe.manage`
+  - Quick Service QR and F&B notification test use `fb.settings.manage`
+- Product list API now supports `product_type`, so recipe setup can correctly separate `menu_item` and `raw_material`.
+- Demo F&B seed now creates raw materials and sample recipes for recipe/cost testing.
+- `/restaurant/recipes` can create a missing raw material inline and immediately append it to the recipe form.
+- Staff operations guide was added in `RESTAURANT-OPERATIONS-GUIDE.md`.
 
 ## Validation Already Run
 
@@ -137,9 +147,13 @@ bash scripts/fnb-smoke.sh
 Result:
 
 - health returned `{"status":"ok","version":"1.0.0"}`
+- `docker compose exec -T backend python -m app.utils.seed_fnb_demo` passed:
+  - seeded 4 categories, 12 products, 8 raw materials, 4 recipes
 - `bash scripts/fnb-smoke.sh` passed:
-  - quick-service session `43cf4255-46d6-429c-9d46-e157a38e09bb`, queue `016`
-  - dine-in session `2d283a5c-7b5b-4eb4-89fa-f78d79cffd10`, checkout total `178.00`
+  - quick-service session `4d48945e-029f-45ae-bbdd-94d4906c31d0`, queue `026`
+  - dine-in session `78ed30af-fed5-4d77-b973-c24efbc1f782`, checkout total `178.00`
+- Raw material API smoke passed:
+  - created SKU `RAW-SMOKE-1780414881` through `/api/v1/restaurant/raw-materials`
 
 ## Next Work To Do
 
@@ -157,9 +171,11 @@ Start here next session.
 
 ### 2. Next Build Items
 
-- Add manager/cashier/kitchen permission separation for restaurant actions.
-- Add recipe-cost readiness helpers: seed raw materials and sample recipes, plus easier raw material creation from recipe setup.
-- Add a short operations guide for staff: open shop, print QR, take orders, kitchen flow, pickup, checkout, and end-of-day checks.
+- Create or verify real non-admin roles for manager/cashier/kitchen, then run manual permission UAT with separate users.
+- Manual visual UAT for `/restaurant/recipes` after demo seed: create raw material, create recipe, edit recipe, delete recipe, and export ingredient usage CSV.
+- Test physical/mobile devices on same Wi-Fi using the Mac LAN IP instead of `localhost`.
+- Prepare production deployment notes: public URL, HTTPS, QR URL base, printer setup, and backup/restore checklist.
+- Decide whether stock count variance should become the next build item after recipe-cost readiness.
 
 Reference checklist:
 

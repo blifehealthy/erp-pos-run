@@ -14,11 +14,13 @@ from app.dependencies import TokenData, require_permission
 from app.models.restaurant import DiningTable, DiningSession, DiningOrder, DiningOrderItem, KitchenTicket
 from app.models.settings import BranchSettings
 from app.schemas.restaurant import (
-    RecipeCreate, RecipeUpdate, IngredientUsageReport,
+    RecipeCreate, RecipeUpdate, IngredientUsageReport, RawMaterialCreate,
     TableCreate, TableUpdate, SessionOpen, PlaceOrderRequest,
     CancelRequest, TicketStatusUpdate, SessionCheckoutRequest,
 )
+from app.schemas.product import ProductCreate, ProductListItem
 from app.services.dining_service import DiningService
+from app.services.product_service import ProductService
 from app.services.recipe_service import RecipeService
 
 router = APIRouter(prefix="/api/v1/restaurant", tags=["restaurant"])
@@ -47,7 +49,7 @@ async def list_recipes(
 @router.post("/recipes", status_code=status.HTTP_201_CREATED)
 async def create_recipe(
     payload: RecipeCreate,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.recipe.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     svc = RecipeService(db)
@@ -74,7 +76,7 @@ async def get_recipe(
 async def update_recipe(
     recipe_id: uuid.UUID,
     payload: RecipeUpdate,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.recipe.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     svc = RecipeService(db)
@@ -89,7 +91,7 @@ async def update_recipe(
 @router.delete("/recipes/{recipe_id}")
 async def delete_recipe(
     recipe_id: uuid.UUID,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.recipe.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     svc = RecipeService(db)
@@ -98,6 +100,38 @@ async def delete_recipe(
         raise HTTPException(status_code=404, detail="ไม่พบสูตร")
     await svc.delete_recipe(recipe)
     return ok({"deleted": True})
+
+
+# ── Raw Materials ─────────────────────────────────────────────────────────────
+
+@router.post("/raw-materials", status_code=status.HTTP_201_CREATED)
+async def create_raw_material(
+    payload: RawMaterialCreate,
+    current: TokenData = Depends(require_permission("fb.recipe.manage")),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    sku = payload.sku.strip()
+    name = payload.name.strip()
+    if not sku or not name:
+        raise HTTPException(status_code=400, detail="กรุณาระบุ SKU และชื่อวัตถุดิบ")
+    service = ProductService(db)
+    product = await service.create_product(
+        current.company_id,
+        ProductCreate(
+            sku=sku,
+            name=name,
+            description=f"Created from restaurant recipe setup ({payload.unit.strip() or 'unit'})",
+            product_type="raw_material",
+            cost_price=payload.cost_price,
+            selling_price=0,
+            vat_type="included",
+            vat_rate=7,
+            is_active=True,
+            is_for_sale=False,
+            is_for_purchase=True,
+        ),
+    )
+    return ok(ProductListItem.model_validate(product).model_dump())
 
 
 # ── Tables ───────────────────────────────────────────────────────────────────
@@ -116,7 +150,7 @@ async def list_tables(
 @router.post("/tables", status_code=status.HTTP_201_CREATED)
 async def create_table(
     payload: TableCreate,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.table.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     if not current.branch_id:
@@ -146,7 +180,7 @@ async def get_table(
 async def update_table(
     table_id: uuid.UUID,
     payload: TableUpdate,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.table.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     if not current.branch_id:
@@ -253,7 +287,7 @@ async def list_sessions(
 @router.post("/sessions", status_code=status.HTTP_201_CREATED)
 async def open_session(
     payload: SessionOpen,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.table.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     if not current.branch_id:
@@ -335,7 +369,7 @@ async def get_session_detail(
 async def place_order(
     session_id: uuid.UUID,
     payload: PlaceOrderRequest,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.order.create")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     svc = DiningService(db)
@@ -357,7 +391,7 @@ async def place_order(
 async def cancel_order(
     order_id: uuid.UUID,
     payload: CancelRequest,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.order.create")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     if not payload.reason.strip():
@@ -380,7 +414,7 @@ async def cancel_order(
 async def cancel_order_item(
     item_id: uuid.UUID,
     payload: CancelRequest,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.order.create")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     if not payload.reason.strip():
@@ -406,7 +440,7 @@ async def cancel_order_item(
 async def update_order_item_status(
     item_id: uuid.UUID,
     payload: TicketStatusUpdate,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.kitchen.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     item = await db.get(DiningOrderItem, item_id)
@@ -431,7 +465,7 @@ async def update_order_item_status(
 @router.post("/sessions/{session_id}/bill")
 async def request_bill(
     session_id: uuid.UUID,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.order.create")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     svc = DiningService(db)
@@ -470,7 +504,7 @@ async def checkout_session(
 @router.post("/sessions/{session_id}/close")
 async def close_session(
     session_id: uuid.UUID,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.table.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     svc = DiningService(db)
@@ -486,7 +520,7 @@ async def close_session(
 @router.get("/kitchen")
 async def list_kitchen_tickets(
     station: str | None = Query(default=None),
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.kitchen.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     if not current.branch_id:
@@ -512,7 +546,7 @@ async def list_kitchen_tickets(
 async def update_ticket(
     ticket_id: uuid.UUID,
     payload: TicketStatusUpdate,
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.kitchen.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     ticket = await db.get(KitchenTicket, ticket_id)
@@ -547,7 +581,7 @@ async def get_pickup_queue(
 
 @router.post("/qs-qr/generate")
 async def generate_qs_qr(
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.settings.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """สร้างหรือดึง QR token สำหรับ Quick Service ของสาขา"""
@@ -570,7 +604,7 @@ async def generate_qs_qr(
 
 @router.post("/line-notify/test")
 async def test_fb_line_notify(
-    current: TokenData = Depends(require_permission("fb.menu.view")),
+    current: TokenData = Depends(require_permission("fb.settings.manage")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """ทดสอบส่ง Line Notify ด้วย token ที่ตั้งไว้ใน F&B settings"""

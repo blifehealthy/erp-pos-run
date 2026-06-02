@@ -88,6 +88,10 @@ export default function RecipesPage(): JSX.Element {
   const [formYieldUnit, setFormYieldUnit] = useState("แก้ว");
   const [formNotes, setFormNotes] = useState("");
   const [formIngredients, setFormIngredients] = useState<RecipeIngredientDraft[]>([]);
+  const [rawName, setRawName] = useState("");
+  const [rawSku, setRawSku] = useState("");
+  const [rawCost, setRawCost] = useState("0");
+  const [rawUnit, setRawUnit] = useState("g");
 
   const listQuery = useQuery({
     queryKey: ["recipes", branchId],
@@ -175,6 +179,31 @@ export default function RecipesPage(): JSX.Element {
     },
   });
 
+  const createRawMaterialMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.post("/restaurant/raw-materials", {
+        sku: rawSku.trim(),
+        name: rawName.trim(),
+        cost_price: Number(rawCost || 0),
+        unit: rawUnit.trim() || "unit",
+      });
+      return res.data.data as ProductListItem;
+    },
+    onSuccess: async (product) => {
+      await queryClient.invalidateQueries({ queryKey: ["products", "raw_material"] });
+      setFormIngredients((prev) => [
+        ...prev,
+        { ingredient_id: product.id, ingredient_name: product.name, quantity: "1", unit: rawUnit },
+      ]);
+      setRawName("");
+      setRawSku("");
+      setRawCost("0");
+      setRawUnit("g");
+      toast({ title: "สร้างวัตถุดิบแล้ว" });
+    },
+    onError: () => toast({ title: "สร้างวัตถุดิบไม่สำเร็จ", description: "ตรวจ SKU ซ้ำหรือสิทธิ์จัดการสูตร" }),
+  });
+
   function resetForm(): void {
     setShowForm(false);
     setEditingId(null);
@@ -184,6 +213,10 @@ export default function RecipesPage(): JSX.Element {
     setFormYieldUnit("แก้ว");
     setFormNotes("");
     setFormIngredients([]);
+    setRawName("");
+    setRawSku("");
+    setRawCost("0");
+    setRawUnit("g");
   }
 
   function startCreate(): void {
@@ -195,6 +228,10 @@ export default function RecipesPage(): JSX.Element {
     setFormYieldUnit("แก้ว");
     setFormNotes("");
     setFormIngredients([]);
+    setRawName("");
+    setRawSku("");
+    setRawCost("0");
+    setRawUnit("g");
   }
 
   function startEdit(recipe: RecipeRead): void {
@@ -434,6 +471,35 @@ export default function RecipesPage(): JSX.Element {
                     <Plus className="mr-1 h-3 w-3" />
                     เพิ่มวัตถุดิบ
                   </Button>
+                </div>
+                <div className="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-600">สร้างวัตถุดิบใหม่</p>
+                  <div className="mt-2 grid grid-cols-[1fr_120px_90px_70px_auto] items-end gap-2">
+                    <div>
+                      <Label className="text-xs">ชื่อวัตถุดิบ</Label>
+                      <Input className="mt-1" value={rawName} onChange={(e) => setRawName(e.target.value)} placeholder="เช่น นมสด" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">SKU</Label>
+                      <Input className="mt-1" value={rawSku} onChange={(e) => setRawSku(e.target.value)} placeholder="RAW-MILK" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">ต้นทุน/หน่วย</Label>
+                      <Input type="number" className="mt-1" value={rawCost} min="0" step="0.0001" onChange={(e) => setRawCost(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs">หน่วย</Label>
+                      <Input className="mt-1" value={rawUnit} onChange={(e) => setRawUnit(e.target.value)} placeholder="g/ml" />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!rawName.trim() || !rawSku.trim() || createRawMaterialMutation.isPending}
+                      onClick={() => createRawMaterialMutation.mutate()}
+                    >
+                      {createRawMaterialMutation.isPending ? "กำลังสร้าง..." : "สร้าง"}
+                    </Button>
+                  </div>
                 </div>
                 <div className="mt-3 space-y-2">
                   {formIngredients.length === 0 && (

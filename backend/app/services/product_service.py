@@ -135,11 +135,14 @@ class ProductService:
         limit: int = 20,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
+        product_type: str | None = None,
         is_active: bool | None = None,
     ) -> tuple[list[Product], int]:
         filters = [Product.company_id == company_id, Product.deleted_at.is_(None)]
         if category_id:
             filters.append(Product.category_id == category_id)
+        if product_type:
+            filters.append(Product.product_type == product_type)
         if is_active is not None:
             filters.append(Product.is_active.is_(is_active))
         if search:

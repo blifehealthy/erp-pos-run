@@ -265,14 +265,25 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - ดูต้นทุนต่อแก้ว/จาน
 - ดู gross margin
 - [x] เพิ่ม UI แก้ไขสูตรเดิม พร้อมเปลี่ยน yield, notes และรายการวัตถุดิบ
+- [x] เพิ่มการสร้างวัตถุดิบใหม่จากหน้าสูตรโดยใช้สิทธิ์ `fb.recipe.manage`
+- [x] เพิ่ม demo raw materials และ sample recipes สำหรับทดสอบต้นทุน
 
 ### Demo F&B Menu Seed
 - [x] เพิ่ม script `python -m app.utils.seed_fnb_demo` สำหรับสร้างเมนูทดสอบ 4 หมวด / 12 รายการ
+- [x] Seed raw materials และ sample recipes สำหรับ recipe/cost testing
 - ใช้ซ้ำได้ผ่าน backend container: `docker compose exec backend python -m app.utils.seed_fnb_demo`
 
 ### Test Coverage / UAT
 - [x] เพิ่ม smoke script `scripts/fnb-smoke.sh` สำหรับ flow seed menu → quick service order → kitchen ticket → customer status
 - [x] เพิ่ม UAT checklist ร้านอาหารใน `UAT-RESTAURANT.md`
+- [x] เพิ่มคู่มือปฏิบัติงานร้านใน `RESTAURANT-OPERATIONS-GUIDE.md`
+
+### Restaurant Permissions
+- [x] แยกสิทธิ์จัดการโต๊ะ/session เป็น `fb.table.manage`
+- [x] แยกสิทธิ์สั่งอาหาร/เรียกบิล/checkout/cancel เป็น `fb.order.create`
+- [x] แยกสิทธิ์ครัวเป็น `fb.kitchen.manage`
+- [x] แยกสิทธิ์สูตรและวัตถุดิบเป็น `fb.recipe.manage`
+- [x] แยกสิทธิ์ตั้งค่า QR/notification เป็น `fb.settings.manage`
 
 ### 5. `/restaurant/reports/ingredients` — Ingredient Report
 - ยอดใช้วัตถุดิบรายกะ/รายวัน
@@ -299,6 +310,7 @@ PATCH  /api/v1/restaurant/kitchen/{id}       เปลี่ยนสถาน�
 GET    /api/v1/restaurant/recipes
 POST   /api/v1/restaurant/recipes
 PATCH  /api/v1/restaurant/recipes/{id}
+POST   /api/v1/restaurant/raw-materials
 
 GET    /api/v1/restaurant/reports/ingredients
 
