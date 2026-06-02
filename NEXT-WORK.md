@@ -90,6 +90,9 @@ Last updated: 2026-06-02
 - F&B checkout hardening:
   - Auto-created F&B cashier shift number now fits the database column.
   - POS sale stock movement now skips `menu_item` and `raw_material`, matching the F&B design where recipe/ingredient usage is estimated separately.
+- Recipe Management for staff now supports editing existing recipes:
+  - Staff can update recipe name, yield, notes, and ingredient rows from `/restaurant/recipes`.
+  - The menu item binding is locked during edit so a recipe cannot accidentally move to another product.
 - `RESTAURANT-MODULE-PLAN.md` was updated with completed checklist items.
 
 ## Validation Already Run
@@ -134,6 +137,7 @@ Start here next session.
 - Use the now-passing `bash scripts/fnb-smoke.sh` as the business-flow baseline.
 - Manually inspect mobile dine-in and quick-service pages on 320px/390px widths.
 - Manually inspect Table Map badges, Kitchen Display filters, Pickup Display readability, Session Detail served/cancel controls, and checkout receipt copy.
+- Manually inspect `/restaurant/recipes` create/edit/delete and `/restaurant/reports/ingredients` CSV export.
 - Note UI friction before moving to recipe/cost work.
 
 Reference checklist:

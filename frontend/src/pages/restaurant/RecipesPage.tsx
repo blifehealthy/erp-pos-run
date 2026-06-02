@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChefHat, Plus, Trash2, TrendingUp, UtensilsCrossed, X } from "lucide-react";
+import { ChefHat, Pencil, Plus, Trash2, TrendingUp, X } from "lucide-react";
 import { useState } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -79,6 +79,7 @@ export default function RecipesPage(): JSX.Element {
   const branchId = useAuthStore((s) => s.branchId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state
   const [formProductId, setFormProductId] = useState("");
@@ -138,6 +139,33 @@ export default function RecipesPage(): JSX.Element {
     onError: () => toast({ title: "บันทึกไม่สำเร็จ กรุณาลองใหม่" }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      await api.patch(`/restaurant/recipes/${editingId}`, {
+        name: formName,
+        yield_qty: Number(formYieldQty),
+        yield_unit: formYieldUnit,
+        notes: formNotes || null,
+        ingredients: formIngredients
+          .filter((i) => i.ingredient_id && Number(i.quantity) > 0)
+          .map((i, idx) => ({
+            ingredient_id: i.ingredient_id,
+            quantity: Number(i.quantity),
+            unit: i.unit,
+            sort_order: idx,
+          })),
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["recipes"] });
+      await queryClient.invalidateQueries({ queryKey: ["recipe", editingId] });
+      toast({ title: "อัปเดตสูตรแล้ว" });
+      resetForm();
+    },
+    onError: () => toast({ title: "อัปเดตไม่สำเร็จ กรุณาลองใหม่" }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => api.delete(`/restaurant/recipes/${id}`),
     onSuccess: async () => {
@@ -149,12 +177,42 @@ export default function RecipesPage(): JSX.Element {
 
   function resetForm(): void {
     setShowForm(false);
+    setEditingId(null);
     setFormProductId("");
     setFormName("");
     setFormYieldQty("1");
     setFormYieldUnit("แก้ว");
     setFormNotes("");
     setFormIngredients([]);
+  }
+
+  function startCreate(): void {
+    setEditingId(null);
+    setShowForm(true);
+    setFormProductId("");
+    setFormName("");
+    setFormYieldQty("1");
+    setFormYieldUnit("แก้ว");
+    setFormNotes("");
+    setFormIngredients([]);
+  }
+
+  function startEdit(recipe: RecipeRead): void {
+    setEditingId(recipe.id);
+    setShowForm(true);
+    setFormProductId(recipe.product_id);
+    setFormName(recipe.name);
+    setFormYieldQty(String(recipe.yield_qty));
+    setFormYieldUnit(recipe.yield_unit);
+    setFormNotes(recipe.notes ?? "");
+    setFormIngredients(
+      recipe.ingredients.map((ing) => ({
+        ingredient_id: ing.ingredient_id,
+        ingredient_name: ing.ingredient_name,
+        quantity: String(ing.quantity),
+        unit: ing.unit,
+      }))
+    );
   }
 
   function addIngredient(): void {
@@ -182,7 +240,7 @@ export default function RecipesPage(): JSX.Element {
         title="สูตรอาหาร / เครื่องดื่ม"
         subtitle="จัดการสูตร ต้นทุนวัตถุดิบ และ Gross Margin"
         actions={
-          <Button className="bg-orange-500 hover:bg-orange-600" onClick={() => setShowForm(true)}>
+          <Button className="bg-orange-500 hover:bg-orange-600" onClick={startCreate}>
             <Plus className="mr-2 h-4 w-4" />
             สร้างสูตรใหม่
           </Button>
@@ -231,6 +289,13 @@ export default function RecipesPage(): JSX.Element {
                 <p className="mt-0.5 text-sm text-slate-500">{selected.name} • {selected.yield_qty} {selected.yield_unit}</p>
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => startEdit(selected)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -310,11 +375,11 @@ export default function RecipesPage(): JSX.Element {
           </div>
         )}
 
-        {/* Create Form */}
+        {/* Create/Edit Form */}
         {showForm && (
           <div className="flex-1 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-slate-900">สร้างสูตรใหม่</h2>
+              <h2 className="text-xl font-semibold text-slate-900">{editingId ? "แก้ไขสูตร" : "สร้างสูตรใหม่"}</h2>
               <Button variant="ghost" size="icon" onClick={resetForm}><X className="h-5 w-5" /></Button>
             </div>
 
@@ -325,6 +390,7 @@ export default function RecipesPage(): JSX.Element {
                   <select
                     className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm"
                     value={formProductId}
+                    disabled={Boolean(editingId)}
                     onChange={(e) => {
                       const p = menuItems.find((m) => m.id === e.target.value);
                       setFormProductId(e.target.value);
@@ -338,6 +404,9 @@ export default function RecipesPage(): JSX.Element {
                   </select>
                   {menuItems.length === 0 && (
                     <p className="mt-1 text-xs text-amber-600">ยังไม่มีสินค้าประเภท menu_item — เพิ่มสินค้าก่อน</p>
+                  )}
+                  {editingId && (
+                    <p className="mt-1 text-xs text-slate-500">แก้ไขสูตรเดิมจะไม่เปลี่ยนเมนูที่ผูกไว้</p>
                   )}
                 </div>
                 <div>
@@ -438,10 +507,14 @@ export default function RecipesPage(): JSX.Element {
                 <Button variant="outline" onClick={resetForm}>ยกเลิก</Button>
                 <Button
                   className="bg-orange-500 hover:bg-orange-600"
-                  disabled={!formProductId || !formName || createMutation.isPending}
-                  onClick={() => createMutation.mutate()}
+                  disabled={!formProductId || !formName || createMutation.isPending || updateMutation.isPending}
+                  onClick={() => editingId ? updateMutation.mutate() : createMutation.mutate()}
                 >
-                  {createMutation.isPending ? "กำลังบันทึก..." : "บันทึกสูตร"}
+                  {createMutation.isPending || updateMutation.isPending
+                    ? "กำลังบันทึก..."
+                    : editingId
+                      ? "อัปเดตสูตร"
+                      : "บันทึกสูตร"}
                 </Button>
               </div>
             </div>

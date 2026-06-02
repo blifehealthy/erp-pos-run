@@ -261,6 +261,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - สร้าง/แก้ไขสูตรต่อเมนู
 - ดูต้นทุนต่อแก้ว/จาน
 - ดู gross margin
+- [x] เพิ่ม UI แก้ไขสูตรเดิม พร้อมเปลี่ยน yield, notes และรายการวัตถุดิบ
 
 ### Demo F&B Menu Seed
 - [x] เพิ่ม script `python -m app.utils.seed_fnb_demo` สำหรับสร้างเมนูทดสอบ 4 หมวด / 12 รายการ

@@ -129,6 +129,17 @@ Latest automated smoke result: PASS on 2026-06-02.
 | 08.5 | Ready queue has multiple items | Display shows item count and ready time | | |
 | 08.6 | Network/API error occurs | Display shows an error state instead of a blank screen | | |
 
+## TC-FB-09 Recipe And Ingredient Cost
+
+| # | Step | Expected Result | Actual | Status |
+|---|---|---|---|---|
+| 09.1 | Open `/restaurant/recipes` | Recipe list and cost summary load | | |
+| 09.2 | Create a recipe for a `menu_item` | Recipe saves and appears in the list | | |
+| 09.3 | Select a recipe | Ingredients, cost per yield, selling price, and gross margin show | | |
+| 09.4 | Click edit on an existing recipe | Form opens with existing yield, notes, and ingredient rows prefilled | | |
+| 09.5 | Change ingredient quantity/unit and save | Recipe updates and recalculates cost/margin | | |
+| 09.6 | Open `/restaurant/reports/ingredients` | Theoretical ingredient usage can be filtered and exported as CSV | | |
+
 ## Notes
 
 - Customer pages are public and require no login.
