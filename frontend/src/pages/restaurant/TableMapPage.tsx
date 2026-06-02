@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ConciergeBell, Plus, QrCode, ReceiptText, Users } from "lucide-react";
+import { Bell, ConciergeBell, Plus, QrCode, ReceiptText, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import QRCode from "qrcode";
@@ -19,9 +19,9 @@ type TableData = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  available: "border-emerald-300 bg-emerald-50",
-  occupied: "border-orange-300 bg-orange-50",
-  bill_requested: "border-blue-300 bg-blue-100",
+  available: "border-emerald-200 bg-white",
+  occupied: "border-amber-300 bg-amber-50",
+  bill_requested: "border-sky-400 bg-sky-50 ring-2 ring-sky-200",
   cleaning: "border-slate-300 bg-slate-100",
 };
 const STATUS_LABEL: Record<string, string> = {
@@ -82,6 +82,9 @@ export default function TableMapPage(): JSX.Element {
   }
 
   const tables = tablesQuery.data ?? [];
+  const occupiedCount = tables.filter((table) => table.status === "occupied").length;
+  const billRequestedCount = tables.filter((table) => table.status === "bill_requested").length;
+  const availableCount = tables.filter((table) => table.status === "available").length;
 
   return (
     <div>
@@ -96,6 +99,21 @@ export default function TableMapPage(): JSX.Element {
       />
 
       <div className="p-6">
+        <div className="mb-5 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="text-xs font-semibold text-emerald-700">โต๊ะว่าง</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-900">{availableCount}</p>
+          </div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <p className="text-xs font-semibold text-amber-700">มีลูกค้า</p>
+            <p className="mt-1 text-2xl font-bold text-amber-900">{occupiedCount}</p>
+          </div>
+          <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
+            <p className="text-xs font-semibold text-sky-700">เรียกบิล</p>
+            <p className="mt-1 text-2xl font-bold text-sky-900">{billRequestedCount}</p>
+          </div>
+        </div>
+
         {tables.length === 0 && !tablesQuery.isLoading && (
           <div className="rounded-2xl border border-dashed border-slate-300 p-12 text-center text-slate-400">
             <ConciergeBell className="mx-auto mb-3 h-10 w-10" />
@@ -106,7 +124,7 @@ export default function TableMapPage(): JSX.Element {
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
           {tables.map((table) => (
-            <div key={table.id} className={`rounded-3xl border-2 p-5 transition-all ${STATUS_STYLE[table.status] ?? "border-slate-200 bg-white"}`}>
+            <div key={table.id} className={`rounded-2xl border-2 p-5 shadow-sm transition-all ${STATUS_STYLE[table.status] ?? "border-slate-200 bg-white"}`}>
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">{table.name}</h3>
@@ -115,19 +133,20 @@ export default function TableMapPage(): JSX.Element {
                     <span>{table.capacity} ที่นั่ง</span>
                   </div>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-medium ${
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${
                   table.status === "available" ? "bg-emerald-100 text-emerald-700"
-                  : table.status === "bill_requested" ? "bg-blue-100 text-blue-700"
-                  : "bg-orange-100 text-orange-700"
+                  : table.status === "bill_requested" ? "bg-sky-600 text-white"
+                  : "bg-amber-100 text-amber-800"
                 }`}>
+                  {table.status === "bill_requested" ? <Bell className="h-3 w-3" /> : null}
                   {STATUS_LABEL[table.status] ?? table.status}
                 </span>
               </div>
 
               {table.queue_number && (
-                <div className="mt-3 rounded-xl bg-white/80 px-3 py-2 text-center">
+                <div className="mt-3 rounded-xl bg-white/90 px-3 py-2 text-center shadow-sm">
                   <span className="text-xs text-slate-500">คิว</span>
-                  <span className="ml-2 text-2xl font-bold text-orange-600">{String(table.queue_number).padStart(3, "0")}</span>
+                  <span className="ml-2 text-2xl font-bold text-slate-950">{String(table.queue_number).padStart(3, "0")}</span>
                 </div>
               )}
 
@@ -144,7 +163,7 @@ export default function TableMapPage(): JSX.Element {
                   <button
                     type="button"
                     onClick={() => openSessionMutation.mutate(table.id)}
-                    className="flex-1 rounded-lg bg-orange-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-600"
+                    className="flex-1 rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
                   >
                     เปิดโต๊ะ
                   </button>
@@ -153,14 +172,14 @@ export default function TableMapPage(): JSX.Element {
                     <button
                       type="button"
                       onClick={() => navigate(`/restaurant/session/${table.active_session_id}/detail`)}
-                      className="flex items-center gap-1 rounded-lg bg-blue-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-600"
+                      className="flex items-center gap-1 rounded-lg bg-slate-950 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
                     >
                       ดู/สั่งเพิ่ม
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate(`/restaurant/session/${table.active_session_id}/checkout`)}
-                      className="flex items-center gap-1 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600"
+                      className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
                     >
                       <ReceiptText className="h-3 w-3" />
                       รวมบิล

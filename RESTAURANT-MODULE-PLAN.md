@@ -203,7 +203,7 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] เพิ่มหมายเหตุรายเมนูและหมายเหตุรวม
 - [x] ส่งออเดอร์เข้า dining session
 - [x] แสดงสถานะรายการอาหารและเรียกบิล
-- [ ] แยก shared mobile menu components ใช้ร่วมกับ Quick Service
+- [x] แยก shared mobile menu components ใช้ร่วมกับ Quick Service
 - [ ] เพิ่ม search menu บน mobile
 - [ ] เพิ่ม item detail/options สำหรับ modifier เช่น หวานน้อย เพิ่มช็อต
 - [ ] เพิ่ม confirmation/empty state ที่ polish กว่านี้
@@ -212,9 +212,14 @@ cost_per_item = Σ (ingredient_qty × latest_purchase_price_per_unit)
 - [x] โหลดเมนูจาก QR ร้านแบบ public
 - [x] ส่งออเดอร์และออกเลขคิว
 - [x] แสดงสถานะคิวสำหรับรับเอง
-- [ ] ใช้ shared mobile menu components ชุดเดียวกับ dine-in
+- [x] ใช้ shared mobile menu components ชุดเดียวกับ dine-in
 - [ ] เพิ่ม customer phone optional สำหรับติดตามคิว
-- [ ] ปรับ pickup status ให้เห็นเด่นบนมือถือและจอ pickup
+- [x] ปรับ pickup status ให้เห็นเด่นบนมือถือและจอ pickup
+
+**Staff Displays**
+- [x] ปรับ Kitchen Display ให้เรียงรายการเก่าก่อนและแสดงงานเกิน 10 นาที
+- [x] ปรับ Pickup Display ให้คิวแรกเด่นและคิวอื่นอ่านง่าย
+- [x] ปรับ Table Map ให้เห็นจำนวนโต๊ะว่าง / มีลูกค้า / เรียกบิล
 
 ### 3. `/restaurant/kitchen` — Kitchen Display
 - แสดง ticket แบบ Kanban: pending | cooking | done

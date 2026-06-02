@@ -29,6 +29,8 @@ export default function PickupDisplayPage(): JSX.Element {
 
   const readyQueue = queueQuery.data ?? [];
   const prefix = settingsQuery.data?.fb_queue_prefix ?? "";
+  const primaryQueue = readyQueue[0];
+  const secondaryQueues = readyQueue.slice(1);
 
   // เล่นเสียงเมื่อมีคิวใหม่
   useEffect(() => {
@@ -52,40 +54,49 @@ export default function PickupDisplayPage(): JSX.Element {
   }, [readyQueue]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-slate-900 px-8">
+    <div className="flex min-h-screen flex-col bg-slate-950 px-8 py-8 text-white">
       {/* Header */}
-      <div className="mb-12 text-center">
-        <p className="text-lg font-semibold uppercase tracking-[0.4em] text-orange-400">รับอาหาร</p>
-        <p className="mt-2 text-5xl font-black text-white">พร้อมรับแล้ว!</p>
+      <div className="text-center">
+        <p className="text-lg font-semibold uppercase tracking-[0.4em] text-emerald-400">รับอาหาร</p>
+        <p className="mt-2 text-5xl font-black">พร้อมรับแล้ว</p>
+        <p className="mt-3 text-sm text-slate-400">โปรดตรวจเลขคิว แล้วติดต่อพนักงานที่เคาน์เตอร์</p>
       </div>
 
       {/* Queue Numbers */}
       {readyQueue.length === 0 ? (
-        <div className="text-center">
-          <p className="text-6xl">⏳</p>
-          <p className="mt-4 text-2xl font-medium text-slate-400">ยังไม่มีออเดอร์พร้อม</p>
+        <div className="flex flex-1 items-center justify-center text-center">
+          <div>
+            <p className="text-7xl">...</p>
+            <p className="mt-4 text-2xl font-medium text-slate-400">ยังไม่มีออเดอร์พร้อม</p>
+          </div>
         </div>
       ) : (
-        <div className="flex flex-wrap justify-center gap-6">
-          {readyQueue.map((num) => (
-            <div
-              key={num}
-              className="flex flex-col items-center rounded-3xl border-4 border-orange-400 bg-orange-500 px-10 py-8 shadow-2xl shadow-orange-900/50 animate-bounce"
-              style={{ animationDuration: "1.5s" }}
-            >
-              <span className="text-lg font-bold text-orange-100 uppercase tracking-widest">{prefix || "คิว"}</span>
-              <span className="mt-1 text-8xl font-black text-white leading-none">
-                {String(num).padStart(3, "0")}
+        <div className="flex flex-1 flex-col items-center justify-center gap-8">
+          {primaryQueue ? (
+            <div className="flex min-w-[320px] flex-col items-center rounded-[2rem] border-4 border-emerald-300 bg-emerald-500 px-14 py-10 shadow-2xl shadow-emerald-950/60">
+              <span className="text-xl font-bold uppercase tracking-widest text-emerald-950">{prefix || "คิว"}</span>
+              <span className="mt-2 text-9xl font-black leading-none text-white">
+                {String(primaryQueue).padStart(3, "0")}
               </span>
             </div>
-          ))}
+          ) : null}
+          {secondaryQueues.length > 0 ? (
+            <div className="flex flex-wrap justify-center gap-4">
+              {secondaryQueues.map((num) => (
+                <div key={num} className="rounded-3xl border border-slate-700 bg-slate-900 px-7 py-5 text-center">
+                  <span className="block text-xs font-semibold uppercase tracking-widest text-slate-400">{prefix || "คิว"}</span>
+                  <span className="mt-1 block text-5xl font-black leading-none text-white">{String(num).padStart(3, "0")}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
 
       {/* Footer */}
-      <div className="mt-16 text-center text-slate-600">
+      <div className="text-center text-slate-500">
         <p className="text-sm">อัปเดตทุก 5 วินาที</p>
-        <p className="mt-1 text-xs">Kitchen Display → เสร็จแล้ว → แสดงที่นี่</p>
+        <p className="mt-1 text-xs">Kitchen Display &gt; เสร็จแล้ว &gt; แสดงที่นี่</p>
       </div>
     </div>
   );
