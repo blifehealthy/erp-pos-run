@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Building2, ChevronDown, LogOut, Menu, UserCircle2 } from "lucide-react";
+import { useCallback, useEffect, useMemo } from "react";
 import { authApi } from "@/lib/api";
 import { useLogout } from "@/hooks/useAuth";
 import { useAuthStore } from "@/stores/auth.store";
@@ -37,23 +38,33 @@ export default function TopBar({ title, onMenuClick }: TopBarProps): JSX.Element
     }
   });
 
+  const defaultBranch = useMemo(
+    () => branchesQuery.data?.find((branch) => branch.is_default) ?? branchesQuery.data?.[0] ?? null,
+    [branchesQuery.data]
+  );
   const currentBranch =
-    branchesQuery.data?.find((branch) => branch.branch_id === branchId) ??
-    branchesQuery.data?.find((branch) => branch.is_default) ??
-    null;
+    branchesQuery.data?.find((branch) => branch.branch_id === branchId) ?? defaultBranch;
 
-  async function handleSwitchBranch(nextBranchId: string): Promise<void> {
+  const handleSwitchBranch = useCallback(async (nextBranchId: string, notify = true): Promise<void> => {
     if (!companyId) {
       return;
     }
 
     const response = await authApi.switchBranch(nextBranchId);
     setSession(response.data.data, companyId);
-    toast({
-      title: "เปลี่ยนสาขาแล้ว",
-      description: "ระบบได้อัปเดตสิทธิ์และบริบทสาขาให้เรียบร้อย"
-    });
-  }
+    if (notify) {
+      toast({
+        title: "เปลี่ยนสาขาแล้ว",
+        description: "ระบบได้อัปเดตสิทธิ์และบริบทสาขาให้เรียบร้อย"
+      });
+    }
+  }, [companyId, setSession, toast]);
+
+  useEffect(() => {
+    if (!branchId && defaultBranch) {
+      void handleSwitchBranch(defaultBranch.branch_id, false);
+    }
+  }, [branchId, defaultBranch, handleSwitchBranch]);
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm md:px-6">

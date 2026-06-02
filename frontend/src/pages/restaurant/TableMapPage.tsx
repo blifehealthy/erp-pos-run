@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import { Bell, ConciergeBell, Plus, QrCode, ReceiptText, Users } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +29,16 @@ const STATUS_LABEL: Record<string, string> = {
   available: "ว่าง", occupied: "มีลูกค้า", bill_requested: "เรียกบิล", cleaning: "กำลังทำความสะอาด",
 };
 
+type ApiErrorBody = {
+  detail?: string;
+  error?: string;
+};
+
+function getErrorMessage(error: unknown): string {
+  const axiosError = error as AxiosError<ApiErrorBody>;
+  return axiosError.response?.data?.detail ?? axiosError.response?.data?.error ?? (error instanceof Error ? error.message : "ไม่สามารถทำรายการได้");
+}
+
 export default function TableMapPage(): JSX.Element {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -44,14 +55,35 @@ export default function TableMapPage(): JSX.Element {
     queryKey: ["dining-tables", branchId],
     queryFn: async () => (await authApi.get("/restaurant/tables")).data.data as TableData[],
     refetchInterval: 15_000,
+    enabled: Boolean(branchId),
   });
 
   const createMutation = useMutation({
-    mutationFn: async () => authApi.post("/restaurant/tables", { name: newName, capacity: Number(newCapacity) }),
+    mutationFn: async () => {
+      const name = newName.trim();
+      const capacity = Number(newCapacity);
+      if (!branchId) {
+        throw new Error("กรุณาเลือกสาขาก่อนเพิ่มโต๊ะ");
+      }
+      if (!name) {
+        throw new Error("กรุณากรอกชื่อโต๊ะ");
+      }
+      if (!Number.isFinite(capacity) || capacity < 1) {
+        throw new Error("จำนวนที่นั่งต้องมากกว่า 0");
+      }
+      return authApi.post("/restaurant/tables", { name, capacity });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["dining-tables"] });
-      toast({ title: `เพิ่มโต๊ะ "${newName}" แล้ว` });
+      toast({ title: `เพิ่มโต๊ะ "${newName.trim()}" แล้ว` });
       setAddOpen(false); setNewName(""); setNewCapacity("4");
+    },
+    onError: (error) => {
+      toast({
+        title: "เพิ่มโต๊ะไม่สำเร็จ",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
     },
   });
 
@@ -62,6 +94,13 @@ export default function TableMapPage(): JSX.Element {
       await queryClient.invalidateQueries({ queryKey: ["dining-tables"] });
       toast({ title: "เปิดโต๊ะแล้ว" });
     },
+    onError: (error) => {
+      toast({
+        title: "เปิดโต๊ะไม่สำเร็จ",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
+    },
   });
 
   const closeSessionMutation = useMutation({
@@ -70,6 +109,13 @@ export default function TableMapPage(): JSX.Element {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["dining-tables"] });
       toast({ title: "ปิดโต๊ะแล้ว" });
+    },
+    onError: (error) => {
+      toast({
+        title: "ปิดโต๊ะไม่สำเร็จ",
+        description: getErrorMessage(error),
+        variant: "destructive",
+      });
     },
   });
 
@@ -92,13 +138,25 @@ export default function TableMapPage(): JSX.Element {
         title="แผนที่โต๊ะ"
         subtitle={`${tables.filter((t) => t.status === "occupied" || t.status === "bill_requested").length} / ${tables.length} โต๊ะที่มีลูกค้า`}
         actions={
-          <Button className="bg-orange-500 hover:bg-orange-600" onClick={() => setAddOpen(true)}>
+          <Button className="bg-orange-500 hover:bg-orange-600" disabled={!branchId} onClick={() => setAddOpen(true)}>
             <Plus className="mr-2 h-4 w-4" /> เพิ่มโต๊ะ
           </Button>
         }
       />
 
       <div className="p-6">
+        {!branchId && (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            กรุณาเลือกสาขาที่มุมขวาบนก่อนเพิ่มโต๊ะ
+          </div>
+        )}
+
+        {tablesQuery.isError && (
+          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            โหลดข้อมูลโต๊ะไม่สำเร็จ: {getErrorMessage(tablesQuery.error)}
+          </div>
+        )}
+
         <div className="mb-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
             <p className="text-xs font-semibold text-emerald-700">โต๊ะว่าง</p>
@@ -209,7 +267,7 @@ export default function TableMapPage(): JSX.Element {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>ยกเลิก</Button>
-            <Button className="bg-orange-500 hover:bg-orange-600" disabled={!newName || createMutation.isPending} onClick={() => createMutation.mutate()}>
+            <Button className="bg-orange-500 hover:bg-orange-600" disabled={!branchId || !newName.trim() || createMutation.isPending} onClick={() => createMutation.mutate()}>
               {createMutation.isPending ? "กำลังบันทึก..." : "เพิ่มโต๊ะ"}
             </Button>
           </DialogFooter>
