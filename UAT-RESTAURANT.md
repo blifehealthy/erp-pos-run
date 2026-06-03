@@ -23,13 +23,13 @@ Latest automated smoke result: PASS on 2026-06-03.
 - Quick Service: public menu -> public order -> public status -> kitchen pending/cooking/done -> authenticated pickup queue.
 - Dine-in: staff create table -> public table QR order -> kitchen pending/cooking/done -> staff mark served -> public bill request -> authenticated checkout/receipt.
 - Latest run IDs:
-  - quick-service session `4d48945e-029f-45ae-bbdd-94d4906c31d0`, queue `026`, ticket `58e1e0d4-9466-49fc-bfce-35591c269e8a`
-  - dine-in session `78ed30af-fed5-4d77-b973-c24efbc1f782`, ticket `7522f219-c760-45a1-ba65-7061ca11e298`, checkout total `178.00`
+  - quick-service session `eaab1ef2-16b7-493e-b139-b0df6a31cec7`, queue `001`, ticket `da6464bd-0b28-4cd2-a500-fb8102dfb1b4`
+  - dine-in session `dc156b03-2ffe-4407-9b0a-569d924b97e4`, ticket `20a11495-7d34-4c24-a77b-7b269c9ae03f`, checkout total `178.00`
   - raw material API smoke SKU `RAW-SMOKE-1780414881`
 - Latest permission smoke:
   - company `9790f996-1078-4634-9876-c5a828cbb263`, branch `bf037c46-bccd-41ed-b768-97cfa8d30136`
   - seeded users: `fnb_smoke_cashier`, `fnb_smoke_kitchen`, `fnb_smoke_recipe`, `fnb_smoke_manager`
-  - raw material SKU `PERM-RAW-1780448829`
+  - raw material SKU `PERM-RAW-1780450147`
 
 ## Test Result Legend
 
@@ -165,6 +165,7 @@ Latest automated smoke result: PASS on 2026-06-03.
 | 10.6 | Login as recipe/cost staff | Staff can create raw material and view ingredient report | API returned 201/200 | PASS |
 | 10.7 | Recipe/cost staff tries kitchen/table APIs | Access is blocked by permission guard/API | API returned 403 | PASS |
 | 10.8 | Login as manager staff | Staff can use kitchen, QS QR, and ingredient report APIs | API returned 200 | PASS |
+| 10.9 | Check frontend route/sidebar permissions | Restaurant routes and F&B sidebar use `fb.*` permissions instead of POS permissions | Type-check/build passed after route/sidebar update | PASS |
 
 ## Notes
 

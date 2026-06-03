@@ -46,6 +46,7 @@ type NavItem = {
   to: string;
   icon: typeof LayoutDashboard;
   permission?: string;
+  permissions?: string[];
 };
 
 const mainItems: NavItem[] = [
@@ -101,16 +102,27 @@ const settingsItems: NavItem[] = [
 ]
 
 const fbItems: NavItem[] = [
-  { label: "ภาพรวม F&B", to: "/restaurant", icon: UtensilsCrossed, permission: "pos.sale.view" },
+  { label: "ภาพรวม F&B", to: "/restaurant", icon: UtensilsCrossed, permissions: ["fb.menu.view", "fb.table.manage", "fb.order.create", "fb.kitchen.manage", "fb.recipe.manage", "fb.report.view", "fb.settings.manage"] },
 ]
 
 const fbSubItems: NavItem[] = [
-  { label: "ออเดอร์วันนี้", to: "/restaurant/orders", icon: UtensilsCrossed, permission: "pos.sale.view" },
-  { label: "แผนที่โต๊ะ", to: "/restaurant/tables", icon: UtensilsCrossed, permission: "pos.sale.view" },
-  { label: "สูตรอาหาร", to: "/restaurant/recipes", icon: UtensilsCrossed, permission: "pos.sale.view" },
-  { label: "รายงานวัตถุดิบ", to: "/restaurant/reports/ingredients", icon: UtensilsCrossed, permission: "pos.report.view" },
-  { label: "ตั้งค่า F&B", to: "/restaurant/settings", icon: UtensilsCrossed, permission: "pos.sale.view" },
+  { label: "ออเดอร์วันนี้", to: "/restaurant/orders", icon: UtensilsCrossed, permission: "fb.order.create" },
+  { label: "แผนที่โต๊ะ", to: "/restaurant/tables", icon: UtensilsCrossed, permission: "fb.table.manage" },
+  { label: "Kitchen Display", to: "/restaurant/kitchen", icon: UtensilsCrossed, permission: "fb.kitchen.manage" },
+  { label: "หน้าจอคิว", to: "/restaurant/pickup", icon: UtensilsCrossed, permission: "fb.kitchen.manage" },
+  { label: "สูตรอาหาร", to: "/restaurant/recipes", icon: UtensilsCrossed, permission: "fb.recipe.manage" },
+  { label: "QR Code เมนู", to: "/restaurant/qr", icon: UtensilsCrossed, permission: "fb.settings.manage" },
+  { label: "รายงานวัตถุดิบ", to: "/restaurant/reports/ingredients", icon: UtensilsCrossed, permission: "fb.report.view" },
+  { label: "ตั้งค่า F&B", to: "/restaurant/settings", icon: UtensilsCrossed, permission: "fb.settings.manage" },
 ];
+
+const fbPermissionCodes = ["fb.menu.view", "fb.table.manage", "fb.order.create", "fb.kitchen.manage", "fb.recipe.manage", "fb.report.view", "fb.settings.manage"];
+
+function canShowItem(item: NavItem, hasPermission: (code: string) => boolean): boolean {
+  if (item.permission && !hasPermission(item.permission)) return false;
+  if (item.permissions?.length && !item.permissions.some((code) => hasPermission(code))) return false;
+  return true;
+}
 
 export default function Sidebar({
   isSidebarOpen,
@@ -119,6 +131,7 @@ export default function Sidebar({
   const logout = useLogout();
   const user = useAuthStore((state) => state.user);
   const hasPermission = useAuthStore((state) => state.hasPermission);
+  const hasFbAccess = fbPermissionCodes.some((code) => hasPermission(code));
   const lowStockCount = useLowStockCount();
   const usersCountQuery = useQuery({
     queryKey: ["sidebar", "users-count"],
@@ -133,10 +146,10 @@ export default function Sidebar({
   const branchId = useAuthStore((s) => s.branchId);
   const fbSettingsQuery = useQuery({
     queryKey: ["branch-settings", branchId],
-    enabled: Boolean(branchId) && hasPermission("pos.sale.view"),
+    enabled: Boolean(branchId) && (hasPermission("system.branch.view") || hasPermission("*")),
     queryFn: async () => (await branchApi.getSettings(branchId!)).data.data as BranchSettings,
   });
-  const fbEnabled = fbSettingsQuery.data?.fb_enabled ?? false;
+  const fbEnabled = fbSettingsQuery.data?.fb_enabled ?? hasFbAccess;
 
   useEffect(() => {
     if (hasPermission("inventory.stock.view")) {
@@ -320,17 +333,17 @@ export default function Sidebar({
             ))}
         </div>
 
-        {(fbEnabled || hasPermission("pos.sale.view")) && (
+        {(fbEnabled || hasFbAccess) && (
           <div className="space-y-3">
             <p className="px-3 text-xs uppercase tracking-[0.25em] text-gray-500">
               F&amp;B {!fbEnabled && <span className="ml-1 text-orange-400">(ยังไม่เปิดใช้)</span>}
             </p>
             {fbItems
-              .filter((item) => !item.permission || hasPermission(item.permission))
+              .filter((item) => canShowItem(item, hasPermission))
               .map((item) => (
                 <NavLink
                   key={item.to}
-                  to={fbEnabled ? item.to : "/restaurant/setup"}
+                  to={fbEnabled || !hasPermission("fb.settings.manage") ? item.to : "/restaurant/setup"}
                   onClick={onClose}
                   className={({ isActive }) =>
                     cn(
@@ -346,8 +359,8 @@ export default function Sidebar({
                   {!fbEnabled && <span className="ml-auto rounded-full bg-orange-500 px-2 py-0.5 text-[10px] text-white">ตั้งค่า</span>}
                 </NavLink>
               ))}
-              {fbEnabled && fbSubItems
-                .filter((item) => !item.permission || hasPermission(item.permission))
+              {(fbEnabled || hasFbAccess) && fbSubItems
+                .filter((item) => canShowItem(item, hasPermission))
                 .map((item) => (
                   <NavLink
                     key={item.to}

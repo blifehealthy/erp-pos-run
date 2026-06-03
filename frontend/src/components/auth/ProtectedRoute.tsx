@@ -3,9 +3,10 @@ import { useAuthStore } from "@/stores/auth.store";
 
 type ProtectedRouteProps = {
   permission?: string;
+  permissions?: string[];
 };
 
-export default function ProtectedRoute({ permission }: ProtectedRouteProps): JSX.Element {
+export default function ProtectedRoute({ permission, permissions }: ProtectedRouteProps): JSX.Element {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const hasPermission = useAuthStore((state) => state.hasPermission);
 
@@ -14,6 +15,10 @@ export default function ProtectedRoute({ permission }: ProtectedRouteProps): JSX
   }
 
   if (permission && !hasPermission(permission)) {
+    return <Navigate to="/403" replace />;
+  }
+
+  if (permissions?.length && !permissions.some((code) => hasPermission(code))) {
     return <Navigate to="/403" replace />;
   }
 

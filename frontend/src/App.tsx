@@ -141,23 +141,35 @@ export default function App(): JSX.Element {
               <Route path="/menu/:token" element={<CustomerMenuPage />} />
               <Route path="/order/:token" element={<QuickServicePage />} />
               {/* F&B setup wizard — no AppShell */}
-              <Route path="/restaurant/setup" element={<FBSetupWizard />} />
+              <Route element={<ProtectedRoute permission="fb.settings.manage" />}>
+                <Route path="/restaurant/setup" element={<FBSetupWizard />} />
+              </Route>
               {/* Kitchen & Pickup — fullscreen, no AppShell */}
-              <Route element={<ProtectedRoute permission="pos.sale.view" />}>
+              <Route element={<ProtectedRoute permission="fb.kitchen.manage" />}>
                 <Route path="/restaurant/kitchen" element={<KitchenDisplayPage />} />
                 <Route path="/restaurant/pickup" element={<PickupDisplayPage />} />
               </Route>
-              <Route element={<ProtectedRoute permission="pos.sale.view" />}>
+              <Route element={<ProtectedRoute permissions={["fb.menu.view", "fb.table.manage", "fb.order.create", "fb.kitchen.manage", "fb.recipe.manage", "fb.report.view", "fb.settings.manage"]} />}>
                 <Route element={<AppShell />}>
                   <Route path="/restaurant" element={<RestaurantIndexPage />} />
-                  <Route path="/restaurant/tables" element={<TableMapPage />} />
-                  <Route path="/restaurant/orders" element={<FBOrdersPage />} />
-                  <Route path="/restaurant/recipes" element={<RecipesPage />} />
-                  <Route path="/restaurant/qr" element={<QRManagerPage />} />
-                  <Route path="/restaurant/reports/ingredients" element={<IngredientReportPage />} />
-                  <Route path="/restaurant/settings" element={<FBSettingsPage />} />
-                  <Route path="/restaurant/session/:sessionId/checkout" element={<SessionCheckoutPage />} />
-                  <Route path="/restaurant/session/:sessionId/detail" element={<SessionDetailPage />} />
+                  <Route element={<ProtectedRoute permission="fb.table.manage" />}>
+                    <Route path="/restaurant/tables" element={<TableMapPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute permission="fb.order.create" />}>
+                    <Route path="/restaurant/orders" element={<FBOrdersPage />} />
+                    <Route path="/restaurant/session/:sessionId/checkout" element={<SessionCheckoutPage />} />
+                    <Route path="/restaurant/session/:sessionId/detail" element={<SessionDetailPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute permission="fb.recipe.manage" />}>
+                    <Route path="/restaurant/recipes" element={<RecipesPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute permission="fb.settings.manage" />}>
+                    <Route path="/restaurant/qr" element={<QRManagerPage />} />
+                    <Route path="/restaurant/settings" element={<FBSettingsPage />} />
+                  </Route>
+                  <Route element={<ProtectedRoute permission="fb.report.view" />}>
+                    <Route path="/restaurant/reports/ingredients" element={<IngredientReportPage />} />
+                  </Route>
                 </Route>
               </Route>
               <Route path="/403" element={<NotFoundPage />} />

@@ -10,6 +10,7 @@ import PageHeader from "@/components/layout/PageHeader";
 export default function RestaurantIndexPage(): JSX.Element {
   const navigate = useNavigate();
   const branchId = useAuthStore((s) => s.branchId);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
 
   const settingsQuery = useQuery({
     queryKey: ["branch-settings", branchId],
@@ -38,6 +39,7 @@ export default function RestaurantIndexPage(): JSX.Element {
     ...(hasDineIn ? [
       {
         to: "/restaurant/tables",
+        permission: "fb.table.manage",
         icon: <ConciergeBell className="h-7 w-7" />,
         title: "แผนที่โต๊ะ",
         desc: "เปิด/ปิดโต๊ะ ดูออเดอร์ รวมบิล",
@@ -47,6 +49,7 @@ export default function RestaurantIndexPage(): JSX.Element {
     ...(hasQuickService ? [
       {
         to: "/restaurant/qr",
+        permission: "fb.settings.manage",
         icon: <ShoppingBag className="h-7 w-7" />,
         title: "QR สั่งอาหาร (Quick Service)",
         desc: "สร้าง QR สำหรับลูกค้าสแกนสั่งเอง ได้เลขคิว",
@@ -55,6 +58,7 @@ export default function RestaurantIndexPage(): JSX.Element {
     ] : []),
     {
       to: "/restaurant/orders",
+      permission: "fb.order.create",
       icon: <UtensilsCrossed className="h-7 w-7" />,
       title: "ออเดอร์วันนี้",
       desc: "ดูทุก session ของวัน สถานะ และรวมบิล",
@@ -62,6 +66,7 @@ export default function RestaurantIndexPage(): JSX.Element {
     },
     {
       to: "/restaurant/kitchen",
+      permission: "fb.kitchen.manage",
       icon: <ChefHat className="h-7 w-7" />,
       title: "Kitchen Display",
       desc: "หน้าจอครัว — รับและอัปเดตสถานะออเดอร์",
@@ -70,6 +75,7 @@ export default function RestaurantIndexPage(): JSX.Element {
     ...(hasQuickService && settings.fb_pickup_display_enabled ? [
       {
         to: "/restaurant/pickup",
+        permission: "fb.kitchen.manage",
         icon: <Monitor className="h-7 w-7" />,
         title: "หน้าจอคิวเคาน์เตอร์",
         desc: "เปิดบน TV/tablet ที่เคาน์เตอร์",
@@ -78,6 +84,7 @@ export default function RestaurantIndexPage(): JSX.Element {
     ] : []),
     {
       to: "/restaurant/recipes",
+      permission: "fb.recipe.manage",
       icon: <UtensilsCrossed className="h-7 w-7" />,
       title: "สูตรอาหาร / วัตถุดิบ",
       desc: "จัดการสูตร ต้นทุน และการตัดสต็อก",
@@ -85,6 +92,7 @@ export default function RestaurantIndexPage(): JSX.Element {
     },
     {
       to: "/restaurant/qr",
+      permission: "fb.settings.manage",
       icon: <QrCode className="h-7 w-7" />,
       title: "QR Code เมนู",
       desc: "สร้างและพิมพ์ QR สำหรับโต๊ะหรือร้าน",
@@ -92,12 +100,13 @@ export default function RestaurantIndexPage(): JSX.Element {
     },
     {
       to: "/restaurant/reports/ingredients",
+      permission: "fb.report.view",
       icon: <BarChart2 className="h-7 w-7" />,
       title: "รายงานวัตถุดิบ",
       desc: "ต้นทุน ปริมาณใช้ และ variance รายวัน/รายกะ",
       color: "bg-indigo-500",
     },
-  ];
+  ].filter((card) => hasPermission(card.permission));
 
   return (
     <div>
@@ -109,13 +118,20 @@ export default function RestaurantIndexPage(): JSX.Element {
           : "โหมด: Dine-in + Quick Service"
         }
         actions={
-          <Button variant="outline" asChild>
-            <Link to="/restaurant/settings">ตั้งค่า F&B</Link>
-          </Button>
+          hasPermission("fb.settings.manage") ? (
+            <Button variant="outline" asChild>
+              <Link to="/restaurant/settings">ตั้งค่า F&B</Link>
+            </Button>
+          ) : null
         }
       />
       <div className="p-6">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+            ยังไม่มีเมนู F&B สำหรับสิทธิ์ของผู้ใช้นี้
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((card) => (
             <Link
               key={card.to}
@@ -131,7 +147,8 @@ export default function RestaurantIndexPage(): JSX.Element {
               </div>
             </Link>
           ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

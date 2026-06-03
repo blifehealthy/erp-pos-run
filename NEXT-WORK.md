@@ -121,6 +121,13 @@ Last updated: 2026-06-03
   - seeds test roles/users for cashier, kitchen, recipe/cost, and manager
   - verifies expected 200/201 and 403 responses against restaurant APIs
   - runs idempotently against the local Docker stack
+- Frontend restaurant route and sidebar permissions now use `fb.*` roles:
+  - `/restaurant/kitchen` and `/restaurant/pickup` use `fb.kitchen.manage`
+  - `/restaurant/tables` uses `fb.table.manage`
+  - `/restaurant/orders`, session detail, and checkout use `fb.order.create`
+  - `/restaurant/recipes` uses `fb.recipe.manage`
+  - `/restaurant/qr` and settings use `fb.settings.manage`
+  - ingredient report uses `fb.report.view`
 
 ## Validation Already Run
 
@@ -154,15 +161,20 @@ Result:
 - `docker compose exec -T backend python -m app.utils.seed_fnb_demo` passed:
   - seeded 4 categories, 12 products, 8 raw materials, 4 recipes
 - `bash scripts/fnb-smoke.sh` passed:
-  - quick-service session `4d48945e-029f-45ae-bbdd-94d4906c31d0`, queue `026`
-  - dine-in session `78ed30af-fed5-4d77-b973-c24efbc1f782`, checkout total `178.00`
+  - quick-service session `eaab1ef2-16b7-493e-b139-b0df6a31cec7`, queue `001`
+  - dine-in session `dc156b03-2ffe-4407-9b0a-569d924b97e4`, checkout total `178.00`
 - Raw material API smoke passed:
   - created SKU `RAW-SMOKE-1780414881` through `/api/v1/restaurant/raw-materials`
 - Permission smoke passed on 2026-06-03:
   - `bash scripts/fnb-permission-smoke.sh`
   - company `9790f996-1078-4634-9876-c5a828cbb263`
   - branch `bf037c46-bccd-41ed-b768-97cfa8d30136`
-  - raw material SKU `PERM-RAW-1780448829`
+  - raw material SKU `PERM-RAW-1780450147`
+- Frontend validation passed after role route/sidebar update:
+  - `npm run type-check`
+  - `npm run build`
+  - `docker compose up -d --build frontend nginx`
+  - `curl -s http://localhost/health`
 
 ## Next Work To Do
 
@@ -180,7 +192,11 @@ Start here next session.
 
 ### 2. Next Build Items
 
-- Use `scripts/fnb-permission-smoke.sh` as the automated permission baseline, then manually login as the seeded users to inspect frontend route visibility and menu/sidebar behavior.
+- Manually login as the seeded smoke users and inspect frontend route visibility in the browser:
+  - `fnb_smoke_cashier`
+  - `fnb_smoke_kitchen`
+  - `fnb_smoke_recipe`
+  - `fnb_smoke_manager`
 - Manual visual UAT for `/restaurant/recipes` after demo seed: create raw material, create recipe, edit recipe, delete recipe, and export ingredient usage CSV.
 - Test physical/mobile devices on same Wi-Fi using the Mac LAN IP instead of `localhost`.
 - Prepare production deployment notes: public URL, HTTPS, QR URL base, printer setup, and backup/restore checklist.
