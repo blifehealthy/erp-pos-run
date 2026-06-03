@@ -1,6 +1,6 @@
 # Restaurant Operations Guide
 
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 ## Before Opening
 
@@ -60,6 +60,7 @@ docker compose exec backend python -m app.utils.seed_fnb_demo
 
 ```bash
 bash scripts/fnb-smoke.sh
+bash scripts/fnb-permission-smoke.sh
 ```
 
 ## Permission Guide
@@ -68,3 +69,18 @@ bash scripts/fnb-smoke.sh
 - Cashier/service staff: `fb.menu.view`, `fb.table.manage`, `fb.order.create`
 - Kitchen staff: `fb.menu.view`, `fb.kitchen.manage`
 - Recipe/cost staff: `fb.menu.view`, `fb.recipe.manage`, `fb.report.view`
+
+## Permission Smoke Users
+
+The local permission smoke creates these users with password `SmokePass123!` for UAT only:
+
+- `fnb_smoke_cashier`
+- `fnb_smoke_kitchen`
+- `fnb_smoke_recipe`
+- `fnb_smoke_manager`
+
+Run the automated baseline before manual role UAT:
+
+```bash
+bash scripts/fnb-permission-smoke.sh
+```

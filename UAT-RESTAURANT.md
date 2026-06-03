@@ -15,9 +15,10 @@ Smoke test:
 
 ```bash
 bash scripts/fnb-smoke.sh
+bash scripts/fnb-permission-smoke.sh
 ```
 
-Latest automated smoke result: PASS on 2026-06-02.
+Latest automated smoke result: PASS on 2026-06-03.
 
 - Quick Service: public menu -> public order -> public status -> kitchen pending/cooking/done -> authenticated pickup queue.
 - Dine-in: staff create table -> public table QR order -> kitchen pending/cooking/done -> staff mark served -> public bill request -> authenticated checkout/receipt.
@@ -25,6 +26,10 @@ Latest automated smoke result: PASS on 2026-06-02.
   - quick-service session `4d48945e-029f-45ae-bbdd-94d4906c31d0`, queue `026`, ticket `58e1e0d4-9466-49fc-bfce-35591c269e8a`
   - dine-in session `78ed30af-fed5-4d77-b973-c24efbc1f782`, ticket `7522f219-c760-45a1-ba65-7061ca11e298`, checkout total `178.00`
   - raw material API smoke SKU `RAW-SMOKE-1780414881`
+- Latest permission smoke:
+  - company `9790f996-1078-4634-9876-c5a828cbb263`, branch `bf037c46-bccd-41ed-b768-97cfa8d30136`
+  - seeded users: `fnb_smoke_cashier`, `fnb_smoke_kitchen`, `fnb_smoke_recipe`, `fnb_smoke_manager`
+  - raw material SKU `PERM-RAW-1780448829`
 
 ## Test Result Legend
 
@@ -152,12 +157,14 @@ Latest automated smoke result: PASS on 2026-06-02.
 
 | # | Step | Expected Result | Actual | Status |
 |---|---|---|---|---|
-| 10.1 | Login as cashier/service staff | Staff can open tables, place orders, request bill, checkout, and cancel with reason | | |
-| 10.2 | Cashier opens kitchen page without kitchen permission | Access is blocked by permission guard/API | | |
-| 10.3 | Login as kitchen staff | Staff can view kitchen tickets and move pending -> cooking -> done | | |
-| 10.4 | Kitchen staff tries to create/edit recipe | Access is blocked by permission guard/API | | |
-| 10.5 | Login as manager/recipe staff | Staff can create raw materials and recipes, and view ingredient reports | | |
-| 10.6 | Staff without settings permission generates Quick Service QR | Access is blocked by permission guard/API | | |
+| 10.1 | Run `bash scripts/fnb-permission-smoke.sh` | Smoke roles/users are seeded idempotently | Seeded four F&B smoke users | PASS |
+| 10.2 | Login as cashier/service staff | Staff can view/create tables | API returned 200/201 | PASS |
+| 10.3 | Cashier opens kitchen/recipe/settings APIs without permission | Access is blocked by permission guard/API | API returned 403 | PASS |
+| 10.4 | Login as kitchen staff | Staff can view kitchen tickets | API returned 200 | PASS |
+| 10.5 | Kitchen staff tries table/recipe/settings APIs | Access is blocked by permission guard/API | API returned 403 | PASS |
+| 10.6 | Login as recipe/cost staff | Staff can create raw material and view ingredient report | API returned 201/200 | PASS |
+| 10.7 | Recipe/cost staff tries kitchen/table APIs | Access is blocked by permission guard/API | API returned 403 | PASS |
+| 10.8 | Login as manager staff | Staff can use kitchen, QS QR, and ingredient report APIs | API returned 200 | PASS |
 
 ## Notes
 

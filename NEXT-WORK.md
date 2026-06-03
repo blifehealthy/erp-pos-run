@@ -1,6 +1,6 @@
 # Next Work Handoff
 
-Last updated: 2026-06-02
+Last updated: 2026-06-03
 
 ## Current State
 
@@ -117,6 +117,10 @@ Last updated: 2026-06-02
 - Demo F&B seed now creates raw materials and sample recipes for recipe/cost testing.
 - `/restaurant/recipes` can create a missing raw material inline and immediately append it to the recipe form.
 - Staff operations guide was added in `RESTAURANT-OPERATIONS-GUIDE.md`.
+- Restaurant permission smoke was added in `scripts/fnb-permission-smoke.sh`:
+  - seeds test roles/users for cashier, kitchen, recipe/cost, and manager
+  - verifies expected 200/201 and 403 responses against restaurant APIs
+  - runs idempotently against the local Docker stack
 
 ## Validation Already Run
 
@@ -154,6 +158,11 @@ Result:
   - dine-in session `78ed30af-fed5-4d77-b973-c24efbc1f782`, checkout total `178.00`
 - Raw material API smoke passed:
   - created SKU `RAW-SMOKE-1780414881` through `/api/v1/restaurant/raw-materials`
+- Permission smoke passed on 2026-06-03:
+  - `bash scripts/fnb-permission-smoke.sh`
+  - company `9790f996-1078-4634-9876-c5a828cbb263`
+  - branch `bf037c46-bccd-41ed-b768-97cfa8d30136`
+  - raw material SKU `PERM-RAW-1780448829`
 
 ## Next Work To Do
 
@@ -171,7 +180,7 @@ Start here next session.
 
 ### 2. Next Build Items
 
-- Create or verify real non-admin roles for manager/cashier/kitchen, then run manual permission UAT with separate users.
+- Use `scripts/fnb-permission-smoke.sh` as the automated permission baseline, then manually login as the seeded users to inspect frontend route visibility and menu/sidebar behavior.
 - Manual visual UAT for `/restaurant/recipes` after demo seed: create raw material, create recipe, edit recipe, delete recipe, and export ingredient usage CSV.
 - Test physical/mobile devices on same Wi-Fi using the Mac LAN IP instead of `localhost`.
 - Prepare production deployment notes: public URL, HTTPS, QR URL base, printer setup, and backup/restore checklist.
