@@ -65,6 +65,12 @@ Release manifests are ignored by Git and must not contain secrets. See [releases
 
 CI registry release artifacts are separate from local deploy manifests. Download them from the `Release Images` workflow run when comparing what CI built with what the server deployed.
 
+## Current Integration Validation
+
+PR43 ran `COMPOSE_PROJECT_NAME=erp-pos-prod-pr43 RELEASE_VERSION=ci-pr43 ./scripts/deploy-production.sh .env.production` with a local dummy env. Environment validation, Compose config validation, pre-deploy backup, and production image builds completed. The deploy stopped at the migration step because Alembic reported multiple head revisions for `head`; the current heads are `a1b2c3d4e5f6` and `d4e5f6a7b8c9`.
+
+No application stack was started by the deploy script after the migration failure, no release manifest was generated, and app-only rollback was skipped because there was no completed app deploy to roll back. Resolve the Alembic heads before treating the deploy script as end-to-end validated.
+
 ## Health And Status Verification
 
 After deploy, verify:
@@ -96,7 +102,7 @@ HTTPS activation is separate from deployment. Use [tls-certbot-host.md](./tls-ce
 - Environment validation fails: replace placeholders, fix weak secrets, and rerun validation.
 - Compose config fails: fix invalid compose/env interpolation before building.
 - Backup fails: do not continue; investigate PostgreSQL, Redis, uploads volume, and disk space.
-- Migration fails: do not run `up -d`; inspect migration logs and decide whether to rollback data from the pre-deploy backup.
+- Migration fails: do not run `up -d`; inspect migration logs and decide whether to rollback data from the pre-deploy backup. If Alembic reports multiple heads, create and review a merge migration or otherwise resolve the migration graph before rerunning deploy.
 - Readiness fails: inspect `docker compose ps`, backend logs, PostgreSQL logs, Redis logs, and uploads permissions.
 - Nginx fails: run `docker compose -f docker-compose.prod.yml exec -T nginx nginx -t`.
 

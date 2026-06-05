@@ -26,6 +26,15 @@ The `migrate` service waits for healthy PostgreSQL and runs:
 alembic upgrade head
 ```
 
+## Current Integration Validation
+
+PR43 validated the deploy script with an isolated Compose project and dummy local env. The migration step failed before application startup because `alembic upgrade head` found multiple head revisions. The current heads are:
+
+- `a1b2c3d4e5f6` from `a1b2c3d4e5f6_add_branch_product_replacement_rules.py`
+- `d4e5f6a7b8c9` from `d4e5f6a7b8c9_add_qs_qr_token.py`
+
+Add and review an Alembic merge migration, or otherwise resolve the migration graph, before rerunning production deploy validation.
+
 ## First Deploy Flow
 
 1. Copy `.env.production.example` to `.env.production` on the deployment host.
