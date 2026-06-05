@@ -1,13 +1,36 @@
 name: CI
 
-on:
+"on":
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  register-workflow:
+  production-readiness:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Register workflow
-        run: echo "CI workflow registered on default branch"
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate shell scripts
+        run: sh -n scripts/*.sh
+
+      - name: Run Git safety check
+        run: ./scripts/pre-git-safety-check.sh
+
+      - name: Validate production compose config
+        env:
+          PRODUCTION_ENV_FILE: .env.production.example
+          RELEASE_VERSION: ci
+        run: docker compose -f docker-compose.prod.yml config
+
+      - name: Build backend production image
+        run: docker build -f backend/Dockerfile -t erp-pos-backend:ci ./backend
+
+      - name: Build frontend production image
+        run: docker build -f frontend/Dockerfile -t erp-pos-frontend:ci ./frontend
+
+      - name: Build nginx production image
+        run: docker build -f nginx/Dockerfile.prod -t erp-pos-nginx:ci ./nginx

@@ -3,16 +3,22 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import asyncio
 import os
+import tempfile
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.config import settings
 from app.database import AsyncSessionLocal, init_db
 from app.middleware.branch_context import BranchContextMiddleware
+from app.middleware.request_id import RequestIDMiddleware
 from app.routers import accounting as accounting_router
 from app.routers import api_mgmt, incoming_webhook, public_api, storefront
 from app.routers import crm as crm_router
@@ -60,9 +66,10 @@ app.add_middleware(
 )
 
 app.add_middleware(BranchContextMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
-os.makedirs("./uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="./uploads"), name="uploads")
+os.makedirs(settings.upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
 
 app.include_router(router)
 app.include_router(auth.router)
@@ -93,6 +100,68 @@ app.include_router(restaurant_router.qs_router)
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     return {"status": "ok", "version": settings.app_version}
+
+
+@app.get("/health/live")
+async def health_live() -> dict[str, str]:
+    return {"status": "ok", "version": settings.app_version}
+
+
+async def _check_database() -> str:
+    async with AsyncSessionLocal() as db:
+        await asyncio.wait_for(db.execute(text("SELECT 1")), timeout=5)
+    return "ok"
+
+
+async def _check_redis() -> str:
+    import redis.asyncio as aioredis
+
+    redis = aioredis.from_url(settings.redis_url, decode_responses=True)
+    try:
+        await asyncio.wait_for(redis.ping(), timeout=5)
+    finally:
+        await redis.aclose()
+    return "ok"
+
+
+def _check_uploads() -> str:
+    upload_path = Path(settings.upload_dir)
+    upload_path.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=upload_path, prefix=".health-", delete=True):
+        pass
+    return "ok"
+
+
+@app.get("/health/ready")
+async def health_ready() -> JSONResponse:
+    checks: dict[str, dict[str, str]] = {}
+
+    for name, check in (
+        ("database", _check_database),
+        ("redis", _check_redis),
+    ):
+        try:
+            await check()
+            checks[name] = {"status": "ok"}
+        except Exception:  # pragma: no cover - runtime dependency failure path
+            checks[name] = {"status": "error"}
+
+    try:
+        _check_uploads()
+        checks["uploads"] = {"status": "ok"}
+    except Exception:  # pragma: no cover - runtime dependency failure path
+        checks["uploads"] = {"status": "error"}
+
+    ready = all(check["status"] == "ok" for check in checks.values())
+    status_code = status.HTTP_200_OK if ready else status.HTTP_503_SERVICE_UNAVAILABLE
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "ok" if ready else "error",
+            "checks": checks,
+            "version": settings.app_version,
+        },
+    )
 
 
 @app.get("/")
