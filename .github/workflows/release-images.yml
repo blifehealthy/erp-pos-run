@@ -1,6 +1,6 @@
 name: Release Images
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       release_version:
