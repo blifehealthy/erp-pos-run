@@ -1,0 +1,95 @@
+import type { Permission } from "@/types/user";
+
+export interface UserBranchDetail {
+  branch_id: string;
+  branch_name: string;
+  branch_code: string;
+  role_id: string;
+  role_name: string;
+  is_default: boolean;
+}
+
+export interface UserDetail {
+  id: string;
+  company_id: string;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  is_active: boolean;
+  is_superuser: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  branches: UserBranchDetail[];
+}
+
+export interface RoleDetail {
+  id: string;
+  company_id: string;
+  name: string;
+  description: string | null;
+  is_system: boolean;
+  created_at: string;
+  permissions: Permission[];
+  user_count: number;
+}
+
+export interface BranchSettings {
+  id: string;
+  branch_id: string;
+  pos_receipt_header: string | null;
+  pos_receipt_footer: string | null;
+  pos_require_customer: boolean;
+  pos_allow_discount: boolean;
+  pos_max_discount_pct: number;
+  promptpay_target: string | null;
+  promptpay_name: string | null;
+  working_hours: Record<string, { open: string; close: string }> | null;
+  public_storefront_enabled: boolean;
+  allow_negative_stock: boolean;
+  low_stock_alert_enabled: boolean;
+  receipt_show_tax_id: boolean;
+  receipt_show_logo: boolean;
+  receipt_copies: number;
+  notify_low_stock_email: string | null;
+}
+
+export interface BranchDetail {
+  id: string;
+  company_id: string;
+  code: string;
+  name: string;
+  name_en: string | null;
+  address: string | null;
+  landmark: string | null;
+  phone: string | null;
+  email: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  google_maps_url: string | null;
+  is_warehouse: boolean;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  user_count: number;
+  settings: BranchSettings | null;
+}
+
+export interface BranchReplacementRule {
+  id: string;
+  branch_id: string;
+  source_product_id: string;
+  source_product_name: string;
+  replacement_product_id: string;
+  replacement_product_name: string;
+  created_at: string;
+}
+
+export interface InviteResponse {
+  invitation_id: string;
+  otp_code: string;
+  expires_at: string;
+  message: string;
+}
