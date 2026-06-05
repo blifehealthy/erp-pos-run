@@ -88,11 +88,7 @@ check_find_empty "local log files" \
   find . -path './.git' -prune -o -type f -name '*.log' -print
 
 check_required_file ".env.example"
-if [ -f ".env.production.example" ]; then
-  pass_check "required file exists: .env.production.example"
-else
-  warn_check ".env.production.example is missing; add it in a focused production env template PR if production deploy docs require it"
-fi
+check_required_file ".env.production.example"
 
 check_required_doc "docs/production/git-ci.md"
 check_required_doc "docs/production/first-git-commit.md"
