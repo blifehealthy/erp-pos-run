@@ -151,7 +151,7 @@ Requests include an `X-Request-ID` response header. If a caller provides `X-Requ
 
 ### Current integration validation note
 
-PR41 validated the production Compose build with a local dummy `.env.production`. Backend, frontend, and nginx images built successfully, PostgreSQL and Redis became healthy, and the frontend container served static assets internally. The isolated stack did not fully start because the current backend integration returns `404` for `/health/live` and `/health/ready`; nginx is gated on backend readiness and therefore did not publish `localhost:80`. Integrate the production health/readiness backend changes before treating the stack as launch-ready.
+PR41 validated the production Compose build with a local dummy `.env.production` and found that missing `/health/live` and `/health/ready` endpoints blocked nginx startup. PR42 added those readiness endpoints and reran the isolated Compose validation successfully: backend became healthy, nginx started, `/health`, `/health/live`, `/health/ready`, and `/` returned `200`, and the production smoke script passed against the isolated stack.
 
 ## Operational logs
 
