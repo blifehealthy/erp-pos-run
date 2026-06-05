@@ -39,6 +39,7 @@ Use this checklist for the final production go/no-go review. It is documentation
 - [ ] `ENABLE_API_DOCS=false` for internet-facing production.
 - [ ] `SECRET_KEY`, database password, registry credentials, payment credentials, and smoke-test credentials are not printed or committed.
 - [ ] `POSTGRES_PASSWORD` is strong and matches `DATABASE_URL`.
+- [ ] `DEFAULT_ADMIN_PASSWORD` is set to a strong unique bootstrap password from a secret source.
 - [ ] Registry credentials, if used, are handled by host-level Docker login or host secret storage.
 
 ## Backup Checklist

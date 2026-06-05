@@ -122,7 +122,7 @@ Pass a path to check another file:
 ./scripts/check-production-env.sh .env.production
 ```
 
-The script fails when required variables are missing, placeholder values remain, `ENVIRONMENT` is not `production`, `DEBUG=true`, `SECRET_KEY` is too short, `POSTGRES_PASSWORD` is weak, wildcard CORS is enabled, `ENABLE_API_DOCS` is not `true` or `false`, `PUBLIC_BASE_URL` or `SERVER_NAME` is empty, or certificate/private-key files are found inside the repository.
+The script fails when required variables are missing, placeholder values remain, `ENVIRONMENT` is not `production`, `DEBUG=true`, `SECRET_KEY` is too short, `POSTGRES_PASSWORD` or `DEFAULT_ADMIN_PASSWORD` is weak, wildcard CORS is enabled, `ENABLE_API_DOCS` is not `true` or `false`, `PUBLIC_BASE_URL` or `SERVER_NAME` is empty, or certificate/private-key files are found inside the repository.
 
 Before go-live, review [security-hardening.md](./security-hardening.md), run `./scripts/run-backend-regression.sh`, resolve or formally accept the listed dependency findings, and confirm `ENABLE_API_DOCS=false` for internet-facing production. With production docs disabled, `/api/docs`, `/api/redoc`, and `/api/openapi.json` should return 404 unless explicitly enabled for staging or operator-only environments.
 
@@ -133,6 +133,7 @@ Common failures usually mean the copied example file was not fully customized:
 - `DEBUG must not be true`: remove `DEBUG` or set it to `false`.
 - `SECRET_KEY must be at least 32 characters`: generate a long random secret.
 - `POSTGRES_PASSWORD is weak`: use a strong non-default database password and keep `DATABASE_URL` in sync.
+- `DEFAULT_ADMIN_PASSWORD is weak`: use a strong unique bootstrap admin password from a secret source. The backend requires this value when seeding the default admin user during startup.
 - `CORS_ORIGINS must not allow wildcard origins`: list exact production origins only.
 - `ENABLE_API_DOCS must be true or false`: use `false` for internet-facing production.
 - `certificate or private key files were found`: move `.pem`, `.key`, and `.crt` files outside the repository and mount them from the host.

@@ -145,6 +145,7 @@
 - [ ] Replace every placeholder value before running production services
 - [ ] Use strong random values for `SECRET_KEY`
 - [ ] Use a strong non-default `POSTGRES_PASSWORD`
+- [ ] Use a strong unique `DEFAULT_ADMIN_PASSWORD` for backend startup/bootstrap seeding
 - [ ] Restrict `CORS_ORIGINS` to production domains
 - [ ] Confirm `PUBLIC_BASE_URL` and `SERVER_NAME` match the production domain
 - [ ] Keep certificates and private keys outside the repository

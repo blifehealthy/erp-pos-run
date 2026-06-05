@@ -7,6 +7,7 @@ Use this runbook for explicit production deployments. The deploy script validate
 - Confirm the deployment host has the latest reviewed code.
 - Confirm `.env.production` exists only on the deployment host.
 - Run `./scripts/check-production-env.sh .env.production`.
+- Confirm `DEFAULT_ADMIN_PASSWORD` is set from a secret source; backend startup/bootstrap seeding requires it.
 - Confirm no certificate, private key, dump, SQL, or backup artifacts are staged for commit.
 - Confirm the previous backup and restore drill expectations are understood.
 - Review Alembic migration files before deploying.
@@ -99,7 +100,7 @@ HTTPS activation is separate from deployment. Use [tls-certbot-host.md](./tls-ce
 
 ## Common Failure Handling
 
-- Environment validation fails: replace placeholders, fix weak secrets, and rerun validation.
+- Environment validation fails: replace placeholders, fix weak secrets, confirm `DEFAULT_ADMIN_PASSWORD` is present, and rerun validation.
 - Compose config fails: fix invalid compose/env interpolation before building.
 - Backup fails: do not continue; investigate PostgreSQL, Redis, uploads volume, and disk space.
 - Migration fails: do not run `up -d`; inspect migration logs and decide whether to rollback data from the pre-deploy backup. If Alembic reports multiple heads, create and review a merge migration or otherwise resolve the migration graph before rerunning deploy.

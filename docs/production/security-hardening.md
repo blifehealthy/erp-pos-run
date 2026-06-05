@@ -48,6 +48,7 @@ The production environment validator checks:
 - placeholder values such as `example.com`, `change_me`, and `replace_with` are rejected
 - `SECRET_KEY` is at least 32 characters
 - `POSTGRES_PASSWORD` is not weak/default and is at least 16 characters
+- `DEFAULT_ADMIN_PASSWORD` is present, not weak/default, and is at least 16 characters
 - `CORS_ORIGINS` is not `*`
 - `PUBLIC_BASE_URL` is not empty and should use `https://`
 - `SERVER_NAME` is not empty and is hostname-only

@@ -51,6 +51,7 @@ POSTGRES_PORT
 DATABASE_URL
 REDIS_URL
 SECRET_KEY
+DEFAULT_ADMIN_PASSWORD
 ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS
@@ -94,6 +95,16 @@ case "$(printf '%s' "$POSTGRES_PASSWORD_VALUE" | tr '[:upper:]' '[:lower:]')" in
 esac
 if [ "${#POSTGRES_PASSWORD_VALUE}" -lt 16 ]; then
   fail "POSTGRES_PASSWORD must be at least 16 characters"
+fi
+
+DEFAULT_ADMIN_PASSWORD_VALUE="$(value_of DEFAULT_ADMIN_PASSWORD)"
+case "$(printf '%s' "$DEFAULT_ADMIN_PASSWORD_VALUE" | tr '[:upper:]' '[:lower:]')" in
+  ""|password|admin|administrator|root|secret|changeme|change_me|change_me_in_production|default_admin|default_admin_password)
+    fail "DEFAULT_ADMIN_PASSWORD is weak or still a default"
+    ;;
+esac
+if [ "${#DEFAULT_ADMIN_PASSWORD_VALUE}" -lt 16 ]; then
+  fail "DEFAULT_ADMIN_PASSWORD must be at least 16 characters"
 fi
 
 CORS_ORIGINS_VALUE="$(value_of CORS_ORIGINS)"
