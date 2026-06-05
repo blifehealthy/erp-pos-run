@@ -149,6 +149,10 @@ The production backend container healthcheck uses `/health/ready`, so `docker co
 
 Requests include an `X-Request-ID` response header. If a caller provides `X-Request-ID`, the backend echoes it; otherwise the backend generates one for correlation. Backend request logs include the request ID, method, path, status, and duration.
 
+### Current integration validation note
+
+PR41 validated the production Compose build with a local dummy `.env.production`. Backend, frontend, and nginx images built successfully, PostgreSQL and Redis became healthy, and the frontend container served static assets internally. The isolated stack did not fully start because the current backend integration returns `404` for `/health/live` and `/health/ready`; nginx is gated on backend readiness and therefore did not publish `localhost:80`. Integrate the production health/readiness backend changes before treating the stack as launch-ready.
+
 ## Operational logs
 
 View recent service logs with:

@@ -57,6 +57,7 @@
 - [ ] Confirm `/health` remains backward compatible
 - [ ] Confirm `/health/live` returns process liveness
 - [ ] Confirm `/health/ready` checks PostgreSQL, Redis, and uploads
+- [ ] Resolve PR41 blocker: current integration returns `404` for `/health/live` and `/health/ready`, which keeps the production backend healthcheck unhealthy and blocks nginx startup
 - [ ] Confirm readiness responses do not expose secrets, URLs, stack traces, or credentials
 - [ ] Keep `SECRET_KEY` and other secrets out of source control
 - [ ] Use the explicit production migration workflow before backend startup

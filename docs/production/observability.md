@@ -81,3 +81,4 @@ Future metrics should include:
 - No Prometheus/Grafana stack is configured yet.
 - No alert delivery integration is configured yet.
 - Status checks are host-run operator commands, not scheduled monitoring.
+- PR41 isolated Compose validation found that `/health/live` and `/health/ready` are not yet implemented on the current integration branch, so the backend container remains unhealthy and nginx startup is blocked by the readiness dependency.
