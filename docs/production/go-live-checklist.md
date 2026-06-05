@@ -5,6 +5,7 @@ Use this checklist for the final production go/no-go review. It is documentation
 ## Pre-Go-Live Technical Checklist
 
 - [ ] Reviewed [deploy-runbook.md](./deploy-runbook.md), [rollback-runbook.md](./rollback-runbook.md), [backup-restore.md](./backup-restore.md), [migrations.md](./migrations.md), and [observability.md](./observability.md).
+- [ ] Reviewed [vps-manual-deploy.md](./vps-manual-deploy.md) if using the manual VPS dry-run path before CI/GHCR is available.
 - [ ] Confirmed the deployment host has the reviewed release source or reviewed registry images.
 - [ ] Confirmed `.env.production` exists only on the deployment host and is not committed.
 - [ ] Ran `./scripts/check-production-env.sh .env.production`.

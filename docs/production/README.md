@@ -73,6 +73,8 @@ Do not commit `.env.production`; keep real secrets in local files or a secret ma
 
 See [deploy-runbook.md](./deploy-runbook.md) for the full production deploy flow, pre-deploy checklist, failure handling, and rollback criteria.
 
+See [vps-manual-deploy.md](./vps-manual-deploy.md) for a manual VPS deployment dry-run path that does not require GitHub Actions or GHCR.
+
 See [rollback-runbook.md](./rollback-runbook.md) for app-only rollback, destructive data restore rollback, nginx config rollback, and post-rollback checks.
 
 See [releases.md](./releases.md) for release tag strategy, release manifests, and app image rollback.

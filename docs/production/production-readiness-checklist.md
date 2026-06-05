@@ -227,6 +227,7 @@
 ## Final handoff / go-live
 
 - [ ] Complete [go-live-checklist.md](./go-live-checklist.md) before internet-facing launch
+- [ ] Review [vps-manual-deploy.md](./vps-manual-deploy.md) before using a manual VPS dry run while GitHub Actions or GHCR is unavailable
 - [ ] Complete DNS/domain, TLS/HTTPS, env/secrets, backup, migration, deploy, smoke/UAT, rollback, and observability checks
 - [ ] Record the final go/no-go decision with release version, environment, decision owner, rollback owner, and required follow-ups
 - [ ] Review [operator-handoff.md](./operator-handoff.md) with daily, weekly, and monthly operators
