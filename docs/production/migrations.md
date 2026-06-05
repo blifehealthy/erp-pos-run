@@ -28,12 +28,12 @@ alembic upgrade head
 
 ## Current Integration Validation
 
-PR43 validated the deploy script with an isolated Compose project and dummy local env. The migration step failed before application startup because `alembic upgrade head` found multiple head revisions. The current heads are:
+PR43 validated the deploy script with an isolated Compose project and dummy local env. The migration step failed before application startup because `alembic upgrade head` found multiple head revisions. The heads were:
 
 - `a1b2c3d4e5f6` from `a1b2c3d4e5f6_add_branch_product_replacement_rules.py`
 - `d4e5f6a7b8c9` from `d4e5f6a7b8c9_add_qs_qr_token.py`
 
-Add and review an Alembic merge migration, or otherwise resolve the migration graph, before rerunning production deploy validation.
+PR44 resolved the graph with no schema operations in `e5f6a7b8c9d0_merge_production_migration_heads.py` and corrected the `add_fb_settings` down revision so it runs after `branch_settings` exists. The isolated production deploy validation then completed migrations successfully.
 
 ## First Deploy Flow
 

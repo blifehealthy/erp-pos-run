@@ -153,7 +153,7 @@ Requests include an `X-Request-ID` response header. If a caller provides `X-Requ
 
 PR41 validated the production Compose build with a local dummy `.env.production` and found that missing `/health/live` and `/health/ready` endpoints blocked nginx startup. PR42 added those readiness endpoints and reran the isolated Compose validation successfully: backend became healthy, nginx started, `/health`, `/health/live`, `/health/ready`, and `/` returned `200`, and the production smoke script passed against the isolated stack.
 
-PR43 validated the full deploy script through environment validation, Compose config validation, pre-deploy backup, and production image build. Deploy stopped at the explicit migration step because Alembic has multiple heads (`a1b2c3d4e5f6` and `d4e5f6a7b8c9`), so `alembic upgrade head` cannot choose a single target. Resolve the migration graph before final deploy validation.
+PR43 validated the full deploy script through environment validation, Compose config validation, pre-deploy backup, and production image build, then found an Alembic multiple-head blocker. PR44 resolved the migration graph and reran the isolated deploy successfully through backup, image build, migration, stack startup, status checks, smoke tests, app-only rollback, and release manifest generation.
 
 ## Operational logs
 

@@ -1,7 +1,7 @@
 """add_fb_settings
 
 Revision ID: e1f2a3b4c5d6
-Revises: f1a2b3c4d5e6
+Revises: ab12cd34ef56
 Create Date: 2026-05-31 00:00:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 revision: str = "e1f2a3b4c5d6"
-down_revision: Union[str, None] = "f1a2b3c4d5e6"
+down_revision: Union[str, None] = "ab12cd34ef56"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

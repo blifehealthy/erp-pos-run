@@ -67,9 +67,9 @@ CI registry release artifacts are separate from local deploy manifests. Download
 
 ## Current Integration Validation
 
-PR43 ran `COMPOSE_PROJECT_NAME=erp-pos-prod-pr43 RELEASE_VERSION=ci-pr43 ./scripts/deploy-production.sh .env.production` with a local dummy env. Environment validation, Compose config validation, pre-deploy backup, and production image builds completed. The deploy stopped at the migration step because Alembic reported multiple head revisions for `head`; the current heads are `a1b2c3d4e5f6` and `d4e5f6a7b8c9`.
+PR43 ran `COMPOSE_PROJECT_NAME=erp-pos-prod-pr43 RELEASE_VERSION=ci-pr43 ./scripts/deploy-production.sh .env.production` with a local dummy env and found that Alembic had multiple heads. PR44 added a no-op Alembic merge revision and corrected the `add_fb_settings` migration dependency so the migration graph has one head.
 
-No application stack was started by the deploy script after the migration failure, no release manifest was generated, and app-only rollback was skipped because there was no completed app deploy to roll back. Resolve the Alembic heads before treating the deploy script as end-to-end validated.
+PR44 reran `COMPOSE_PROJECT_NAME=erp-pos-prod-pr44 RELEASE_VERSION=ci-pr44 ./scripts/deploy-production.sh .env.production` with a local dummy env. Environment validation, Compose config validation, pre-deploy backup, image build, migrations, stack startup, status checks, smoke checks, and release manifest generation completed successfully. The local dummy env included `DEFAULT_ADMIN_PASSWORD` because backend startup seeding requires it when the seeded tables are present.
 
 ## Health And Status Verification
 

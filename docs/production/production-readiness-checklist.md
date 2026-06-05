@@ -12,7 +12,7 @@
 - [ ] Use `./scripts/deploy-production.sh .env.production` for standard deploys
 - [ ] Confirm deploy creates a backup before migrations and application startup
 - [ ] Confirm deploy runs the explicit migration script
-- [ ] Resolve PR43 blocker: Alembic currently has multiple heads (`a1b2c3d4e5f6` and `d4e5f6a7b8c9`), so `alembic upgrade head` fails during deploy validation
+- [x] Resolve PR43 blocker: PR44 added a merge revision, corrected migration ordering, and isolated deploy validation now passes migrations
 - [ ] Confirm deploy runs production status checks before success
 - [ ] Set an explicit `RELEASE_VERSION` for reviewed production deploys
 - [ ] Confirm backend, frontend, and nginx images are tagged with the same `RELEASE_VERSION`
@@ -41,6 +41,7 @@
 - [ ] Confirm `IMAGE_REGISTRY`, `IMAGE_NAMESPACE`, and `RELEASE_VERSION` are set for registry deploys
 - [ ] Confirm registry deploy runs backup, migration, status, and smoke checks
 - [ ] Confirm registry rollback to a previous release has been tested
+- [x] Confirm local build-mode isolated deploy validation passes backup, image build, migration, app startup, status checks, smoke checks, and release manifest generation
 
 ## Frontend
 
@@ -73,7 +74,7 @@
 - [ ] Ensure database connection strings do not expose secrets in repository
 - [ ] Run `./scripts/run-production-migrations.sh .env.production` before production `up`
 - [ ] Confirm the `migrate` compose service exits successfully
-- [ ] Confirm Alembic has a single deployable head before running `./scripts/deploy-production.sh`
+- [x] Confirm Alembic has a single deployable head before running `./scripts/deploy-production.sh`
 - [ ] Review Alembic migration files before each production release
 - [ ] Back up the database before applying migrations
 - [ ] Run `./scripts/backup-production.sh` before production migrations
